@@ -8,6 +8,8 @@ Built by **[Renato Pinto · @quebranozes](https://github.com/quebranozes)**.
 
 RENA brings fleet availability, reservations, vehicle allocation, station capacity and transport planning into one workspace. This public portfolio edition uses **synthetic data**, an **English interface** and a **local, deterministic operational assistant**.
 
+**Use and adaptations:** Explore and modify RENA to suit your needs. Own use is free. Any rent-a-car company must contact **Renato Pinto before applying the project in its business**, and anyone making an adaptation must inform him of the changes. [Send a usage or adaptation notice](https://github.com/quebranozes/rena-rent-a-car/issues/new?template=usage-notification.md). See the [license and previous MIT release note](#author--license) below.
+
 ![Fleet planning in RENA](docs/images/planning.png)
 
 ## Why I built it
@@ -133,4 +135,13 @@ Contributions are welcome: broader English query coverage, dedicated domain modu
 **Renato Pinto — [@quebranozes](https://github.com/quebranozes)**  
 Project author and maintainer.
 
-Original project material is available under the **[MIT License](LICENSE)**. You may use, modify and redistribute it while retaining the copyright and license notice. Third-party resources retain their respective terms in [THIRD_PARTY.md](THIRD_PARTY.md).
+From **v1.1.0**, new original material is offered under the **[RENA Own Use and Adaptation Notice License 1.0](LICENSE)**, a custom source-available license:
+
+- **Free own use:** learning, exploration, evaluation and your own personal or internal use.
+- **Modifications welcome:** inform Renato of any adaptation and its intended use. An issue or pull request describing it counts as notification; source disclosure and waiting for approval are not required.
+- **Rent-a-car companies:** contact Renato before operational use, including unmodified deployments and deployments by a contractor. Own internal use remains free under these terms.
+- **Attribution:** preserve the author's credit and license when sharing copies or adaptations. Free sharing and public forks are allowed under these terms; selling the software or offering it as a paid service requires separate terms.
+
+Use the [usage and adaptation notice](https://github.com/quebranozes/rena-rent-a-car/issues/new?template=usage-notification.md) to contact the author. Development and support services, if requested, are agreed separately.
+
+**Licensing history:** [v1.0.0](https://github.com/quebranozes/rena-rent-a-car/tree/v1.0.0) was released under [MIT](docs/licenses/MIT-v1.0.0.txt). Those existing permissions remain in place, including for unchanged material carried into this release; the new conditions cannot retroactively restrict that MIT grant. Third-party resources retain their respective terms in [THIRD_PARTY.md](THIRD_PARTY.md).

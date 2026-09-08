@@ -13,4 +13,6 @@ Use English for documentation and public interface text. Internal field names re
 
 Use synthetic data only. Do not submit customer records, credentials, company URLs or operational exports. Preserve the read-only demo behavior and third-party notices.
 
-By contributing, you agree that your original contribution may be distributed under the repository's MIT License. Be respectful and constructive in issues and pull requests.
+By contributing new original material, you agree that your contribution may be distributed under the [RENA Own Use and Adaptation Notice License 1.0](LICENSE). Contribute only material you have the right to license. Earlier MIT-licensed material and third-party components keep their existing permissions and notices.
+
+Inform Renato Pinto of adaptations through an issue or a pull request describing the changes and intended use. The pull request itself satisfies the adaptation notification requirement. Rent-a-car companies must also contact him before operational deployment; use the [usage and adaptation notice](https://github.com/quebranozes/rena-rent-a-car/issues/new?template=usage-notification.md). See the full license for conditions. Be respectful and constructive in issues and pull requests.

@@ -13,6 +13,6 @@ Public resources are bundled in `static/vendor/` so the demo does not download a
 
 Python dependencies are installed from `requirements.txt` and retain their own licenses. They are not copied into the repository.
 
-The celebration SVG in `static/chatbot/assets/celebration.svg` is original artwork under the project's MIT License. This edition excludes the previous third-party reaction GIF.
+The celebration SVG in `static/chatbot/assets/celebration.svg` is original artwork first released in v1.0.0 under MIT; those permissions remain in place. The historical license is preserved in [docs/licenses/MIT-v1.0.0.txt](docs/licenses/MIT-v1.0.0.txt). This edition excludes the previous third-party reaction GIF.
 
-The root MIT License covers original project material. It does not replace third-party terms or grant rights to third-party trademarks.
+The root [LICENSE](LICENSE) contains the current custom terms for new original material and explains the previous MIT grant. It does not replace third-party terms or grant rights to third-party trademarks.

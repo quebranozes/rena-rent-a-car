@@ -1,21 +1,78 @@
-MIT License
+RENA Own Use and Adaptation Notice License 1.0
+Effective for this release: 8 September 2026 (v1.1.0)
 
-Copyright (c) 2026 Renato Pinto (quebranozes)
+Copyright (c) 2026 Renato Pinto (@quebranozes)
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+1. Permission and scope
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+Subject to the conditions below, you may access, study, run, copy and modify
+the original RENA software and documentation (the "Software") free of charge
+for your own use. Own use includes personal learning, experimentation and
+evaluation, and an organization's own internal use. You may explore and
+adapt the Software to suit your needs.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+You may share the Software and your adaptations without charging for the
+Software, including through public forks and contributions, provided you
+retain this license and the author's copyright notice and identify changes.
+Recipients receive these same permissions subject to these same conditions.
+Selling the Software or providing it as a paid service is outside this grant;
+contact the author to discuss separate terms for those activities.
+
+2. Contact before rent-a-car business use
+
+Any rent-a-car company wishing to apply or deploy the Software in its business
+must contact Renato Pinto before operational use, including use of an
+unmodified copy. This also applies when a contractor deploys it on behalf of
+such a company. Identify the company and describe the intended application
+and any required adaptations. Local exploration and evaluation are permitted
+without prior contact.
+
+This is a contact requirement, not a requirement to wait for approval. This
+license does not impose a fee for the company's own internal use. Paid
+development, support or other services require a separate agreement.
+
+3. Notification of adaptations
+
+Anyone making an adaptation must inform Renato Pinto of the changes and their
+intended use. Provide a brief description when making the adaptation and
+notify the author again of subsequent adaptations. A GitHub issue or pull
+request describing the adaptation satisfies this requirement. You do not
+need to submit your modified source code or wait for approval.
+
+4. Contact channel
+
+Submit a usage or adaptation notice at:
+https://github.com/quebranozes/rena-rent-a-car/issues/new?template=usage-notification.md
+
+An alternative contact channel expressly provided by the author may also be
+used. Keep public notices free of confidential business or personal records.
+
+5. Attribution and third-party material
+
+Retain the attribution "RENA by Renato Pinto (@quebranozes)" in distributed
+copies and associated documentation. Do not imply the author endorses an
+adaptation. Third-party components remain under their own licenses, listed
+in THIRD_PARTY.md; these conditions do not override those licenses.
+
+6. Previous MIT release
+
+Version v1.0.0, commit 083ceac0c72d484723678d2be8b49ecdeff5ddae, was published
+under the MIT License. Its license is preserved in docs/licenses/MIT-v1.0.0.txt.
+This license does not withdraw or restrict permissions already granted under
+MIT for that material. The contact and notification conditions here do not
+retroactively apply to rights exercised under that earlier MIT grant.
+Material obtained from v1.0.0 remains available under its MIT terms even when
+the same material also appears in this release. New original material first
+published under this license is subject to this license.
+
+7. Warranty and liability
+
+The Software is provided "as is", without warranties, including warranties
+of merchantability, fitness for a particular purpose or noninfringement.
+To the extent permitted by law, the authors and copyright holders are not
+liable for claims, damages or other liability arising from the Software or
+its use. No maintenance, support or production-readiness guarantee is made.
+
+This is a custom source-available license, not the MIT License and not an
+OSI-approved open-source license. Rights not granted here are reserved,
+without limiting any rights granted by the earlier MIT release.
