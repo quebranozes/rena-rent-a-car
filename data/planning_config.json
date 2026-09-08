@@ -1,0 +1,96 @@
+{
+  "upgrade_matrix": {
+    "EDMR": {
+      "preferencial": [
+        "EDMR"
+      ],
+      "aceitavel": [],
+      "evitar": []
+    },
+    "CDMR": {
+      "preferencial": [
+        "CDMR"
+      ],
+      "aceitavel": [],
+      "evitar": []
+    },
+    "CDAR": {
+      "preferencial": [
+        "CDAR"
+      ],
+      "aceitavel": [],
+      "evitar": []
+    },
+    "IFAR": {
+      "preferencial": [
+        "IFAR"
+      ],
+      "aceitavel": [],
+      "evitar": []
+    },
+    "LFAE": {
+      "preferencial": [
+        "LFAE"
+      ],
+      "aceitavel": [],
+      "evitar": []
+    },
+    "XDAR": {
+      "preferencial": [
+        "XDAR"
+      ],
+      "aceitavel": [],
+      "evitar": []
+    },
+    "CVMV": {
+      "preferencial": [
+        "CVMV"
+      ],
+      "aceitavel": [],
+      "evitar": []
+    },
+    "LVMR": {
+      "preferencial": [
+        "LVMR"
+      ],
+      "aceitavel": [],
+      "evitar": []
+    },
+    "XVAR": {
+      "preferencial": [
+        "XVAR"
+      ],
+      "aceitavel": [],
+      "evitar": []
+    },
+    "A": {
+      "preferencial": [
+        "A"
+      ],
+      "aceitavel": [],
+      "evitar": []
+    },
+    "AX": {
+      "preferencial": [
+        "AX"
+      ],
+      "aceitavel": [],
+      "evitar": []
+    },
+    "EDAE": {
+      "preferencial": [
+        "EDAE"
+      ],
+      "aceitavel": [],
+      "evitar": []
+    }
+  },
+  "cascade_families": [],
+  "categorias_especiais": {},
+  "parametros": {
+    "retomas_safety_margin": 60
+  },
+  "proximity_matrix": {},
+  "station_schedules": {},
+  "station_open_groups": {}
+}

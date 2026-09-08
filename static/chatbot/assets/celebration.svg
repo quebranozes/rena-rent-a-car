@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 220" role="img" aria-label="RENA celebration">
+  <rect width="220" height="220" rx="24" fill="#171717"/>
+  <path d="m50 45 8 12m105-12-8 12M32 100l15 3m140-3-15 3M66 175l6-14m82 14-6-14" stroke="#ff5000" stroke-width="5" stroke-linecap="round"/>
+  <circle cx="110" cy="92" r="36" fill="#ff5000"/>
+  <path d="m92 91 12 12 25-26" fill="none" stroke="white" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="110" y="153" text-anchor="middle" font-family="sans-serif" font-size="25" font-weight="700" fill="white">RENA</text>
+  <text x="110" y="184" text-anchor="middle" font-family="sans-serif" font-size="12" fill="#ccc">LET'S GO!</text>
+</svg>

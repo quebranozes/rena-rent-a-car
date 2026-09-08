@@ -1,0 +1,2113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<link rel="stylesheet" href="/vendor/fonts.css">
+<link rel="stylesheet" href="/demo.css">
+<script src="/vendor/geography.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RENA — Rent a Car | Portfolio Demo</title>
+    <link rel="icon" type="image/svg+xml" href="/shared/rena.svg">
+    
+    
+    
+    <script>
+        try { document.documentElement.classList.toggle('dark', localStorage.getItem('rena_theme') === 'dark'); } catch (_) {}
+    </script>
+    <script src="/vendor/tailwind.js"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            50:  '#FFF0E5',
+                            100: '#FFDACC',
+                            200: '#FFB899',
+                            300: '#FF9566',
+                            400: '#FF7233',
+                            500: '#FF5000',
+                            600: '#E64800',
+                            700: '#CC4000',
+                            800: '#993000',
+                            900: '#4D1800',
+                        },
+                        secondary: {
+                            50:  '#F0F0F3',
+                            100: '#E0E0E0',
+                            200: '#BDBDBD',
+                            300: '#9E9E9E',
+                            400: '#757575',
+                            500: '#212121',
+                            800: '#121212',
+                            900: '#000000',
+                        },
+                        lynx: {
+                            bg:      '#EBEBF0',
+                            surface: '#FFFFFF',
+                            divider: '#E0E0E0',
+                            subtle:  '#F0F0F3',
+                            blue:    '#559EC8',
+                            green:   '#76B94E',
+                            orange:  '#FF5000',
+                        },
+                    },
+                    fontFamily: {
+                        sans: ['Roboto', 'system-ui', 'sans-serif'],
+                        mono: ['Roboto Mono', 'monospace'],
+                    },
+                }
+            }
+        }
+    </script>
+    <link rel="stylesheet" href="/vendor/fontawesome/css/all.min.css">
+    <link rel="stylesheet" href="/vendor/leaflet/leaflet.css">
+    <script src="/vendor/chart.js"></script>
+    <script src="/vendor/leaflet/leaflet.js"></script>
+    <style>
+        /* Escala uniforme — respeita DPI do sistema sem zoom do browser */
+        html { text-size-adjust: 100%; -webkit-text-size-adjust: 100%; }
+        body { zoom: 1; }
+
+        /* Scrollbar styling */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #BDBDBD; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #9E9E9E; }
+        .dark ::-webkit-scrollbar-thumb { background: #374151; }
+        .dark ::-webkit-scrollbar-thumb:hover { background: #4b5563; }
+
+        /* Sidebar collapsible icon rail */
+        #sidebar {
+            width: 16rem;
+            overflow-x: hidden;
+            overflow-y: auto;
+            transition: width 0.22s cubic-bezier(.4,0,.2,1), transform 0.3s ease;
+        }
+        #sidebar.sidebar-closed { transform: translateX(-100%); }
+        @media (min-width: 768px) {
+            #sidebar.sidebar-closed { transform: translateX(0); }
+            #sidebar.sb-mini:not(.sb-hover) { width: 3.5rem; }
+            #mainWrapper { margin-left: 16rem; transition: margin-left 0.22s cubic-bezier(.4,0,.2,1); }
+            #mainWrapper.sb-mini-main { margin-left: 3.5rem; }
+        }
+        /* Hide text labels in mini mode */
+        #sidebar.sb-mini:not(.sb-hover) .sb-txt { display: none !important; }
+        /* When hover-expanding, sidebar must sit above the tab bar */
+        #sidebar.sb-mini.sb-hover { z-index: 50; box-shadow: 4px 0 24px rgba(0,0,0,0.10); }
+        .dark #sidebar.sb-mini.sb-hover { box-shadow: 4px 0 24px rgba(0,0,0,0.45); }
+        /* Centre nav links & group headers */
+        #sidebar.sb-mini:not(.sb-hover) .nav-link {
+            justify-content: center; padding-left: 0; padding-right: 0;
+            gap: 0; border-left-width: 0;
+        }
+        #sidebar.sb-mini:not(.sb-hover) .nav-group-toggle {
+            justify-content: center; padding-left: 4px; padding-right: 4px;
+        }
+        /* Hide search & status strip */
+        #sidebar.sb-mini:not(.sb-hover) #sbSearch,
+        #sidebar.sb-mini:not(.sb-hover) #sbStatusStrip { display: none; }
+        /* User area: centre avatar */
+        #sidebar.sb-mini:not(.sb-hover) #sbUserArea {
+            justify-content: center; padding-left: 8px; padding-right: 8px; gap: 0;
+        }
+        /* Logo button affordance */
+        #sbLogoBtn { cursor: pointer; user-select: none; }
+
+        /* Nav links — Lynx-aligned */
+        .nav-link { color: #757575; }
+        .nav-link:hover { background: #F0F0F3; color: #FF5000; }
+        .dark .nav-link { color: #6b7280; }
+        .dark .nav-link:hover { background: rgba(255,255,255,0.05); color: #FF5000; }
+        .nav-link.active, .nav-link[style*="bg-primary"] { color: #FF5000; }
+
+        /* Nav groups (collapsible) */
+        .nav-group { overflow: hidden; transition: max-height 0.25s ease; }
+        .nav-group-toggle { background: transparent; border: 0; cursor: pointer; }
+        .nav-group-toggle.collapsed i.fa-chevron-down { transform: rotate(-90deg); }
+        .nav-group.collapsed { max-height: 0 !important; }
+
+        /* ───── Lite mode (regular users): only Vehicle Match in nav ───── */
+        /* Keep #sbStatusStrip and #sbUserArea visible — they show data freshness and identity */
+        body.lite-mode nav .nav-group-toggle,
+        body.lite-mode a.nav-link[data-page="settings"] { display: none !important; }
+        body.lite-mode nav .nav-group { max-height: none !important; overflow: visible !important; }
+
+        /* Lynx card — reusable card component */
+        .lynx-card {
+            background: #FFFFFF;
+            border-radius: 0.75rem;
+            border: 1px solid #E0E0E0;
+            padding: 1rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.02);
+        }
+        .dark .lynx-card {
+            background: #111111;
+            border-color: rgba(255,255,255,0.08);
+        }
+        .lynx-card-p5 { padding: 1.25rem; }
+
+        /* Fleet Planning table — polished layout */
+        .fp-table-wrap { padding: 0; }
+        .fp-table { font-variant-numeric: tabular-nums; border-collapse: separate; border-spacing: 0; }
+        .fp-table thead tr:first-child th {
+            position: sticky;
+            top: 0;
+            z-index: 12;
+            box-shadow: inset 0 -1px 0 rgba(0,0,0,0.06);
+        }
+        .fp-table thead tr:nth-child(2) th {
+            position: sticky;
+            top: var(--fp-row1-h, 56px);
+            z-index: 11;
+            box-shadow: inset 0 -1px 0 rgba(0,0,0,0.08);
+        }
+        .fp-table thead tr:first-child th:first-child { z-index: 22; }
+        .fp-table tbody td.fp-date-cell { z-index: 6; }
+        .dark .fp-table thead tr:first-child th { box-shadow: inset 0 -1px 0 rgba(255,255,255,0.06); }
+        .dark .fp-table thead tr:nth-child(2) th { box-shadow: inset 0 -1px 0 rgba(255,255,255,0.08); }
+        .fp-table tbody td { padding-top: 0.4rem; padding-bottom: 0.4rem; }
+        .fp-table tbody tr.fp-row { transition: background-color 120ms ease; }
+        .fp-table tbody tr.fp-row-today td { background-color: rgba(59,130,246,0.05); }
+        .fp-table tbody tr.fp-row-today td.fp-date-cell {
+            box-shadow: inset 3px 0 0 #3B82F6;
+            background-color: rgba(59,130,246,0.08);
+        }
+        .fp-table tbody tr.fp-row-weekend td { background-color: rgba(59,130,246,0.035); }
+        .fp-table .fp-pool-th { vertical-align: top; }
+        .fp-badges {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 0.35rem;
+            margin-top: 0.35rem;
+        }
+        .fp-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.2rem;
+            font-size: 0.6rem;
+            font-weight: 500;
+            padding: 0.1rem 0.4rem;
+            border-radius: 9999px;
+            background: rgba(148,163,184,0.10);
+            cursor: pointer;
+            transition: background-color 120ms ease, transform 120ms ease;
+            line-height: 1;
+        }
+        .fp-badge:hover { background: rgba(148,163,184,0.22); transform: translateY(-1px); }
+        .fp-badge i { font-size: 0.55rem; }
+
+        /* Lynx modal — dialog/popup component */
+        .lynx-modal {
+            background: #FFFFFF;
+            border-radius: 1rem;
+            border: 1px solid #E0E0E0;
+            box-shadow: 0 25px 50px rgba(0,0,0,0.15), 0 12px 24px rgba(0,0,0,0.1);
+        }
+        .dark .lynx-modal {
+            background: #181818;
+            border-color: rgba(255,255,255,0.08);
+            box-shadow: 0 25px 50px rgba(0,0,0,0.5), 0 12px 24px rgba(0,0,0,0.3);
+        }
+
+        /* Lynx dropdown — floating panel */
+        .lynx-dropdown {
+            background: #FFFFFF;
+            border-radius: 0.75rem;
+            border: 1px solid #E0E0E0;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.08), 0 2px 6px rgba(0,0,0,0.04);
+        }
+        .dark .lynx-dropdown {
+            background: #1A1A1A;
+            border-color: rgba(255,255,255,0.08);
+            box-shadow: 0 4px 16px rgba(0,0,0,0.4), 0 2px 6px rgba(0,0,0,0.2);
+        }
+
+        /* Lynx table row surface */
+        .lynx-surface {
+            background: #FFFFFF;
+        }
+        .dark .lynx-surface {
+            background: #111111;
+        }
+
+        /* Lynx section title */
+        .lynx-section-title {
+            font-size: 0.6rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: #757575;
+        }
+        .dark .lynx-section-title { color: #9ca3af; }
+
+        /* Lynx text utilities */
+        .lynx-text-primary { color: rgba(0,0,0,0.87); }
+        .dark .lynx-text-primary { color: #fff; }
+        .lynx-text-secondary { color: rgba(0,0,0,0.6); }
+        .dark .lynx-text-secondary { color: #9ca3af; }
+        .lynx-text-hint { color: rgba(0,0,0,0.38); }
+        .dark .lynx-text-hint { color: #6b7280; }
+
+        /* Fleet table overrides for Tailwind integration */
+        .fleet-table { border-collapse: collapse; width: max-content; min-width: 100%; }
+        .fleet-table thead th {
+            position: sticky; top: 0; z-index: 10; cursor: pointer; user-select: none;
+            white-space: nowrap; font-size: 0.75rem; font-weight: 600; text-transform: uppercase;
+            letter-spacing: 0.05em; padding: 0.625rem 0.75rem;
+        }
+        .fleet-table tbody td {
+            white-space: nowrap; padding: 0.5rem 0.75rem; font-size: 0.8rem;
+            border-bottom-width: 1px;
+        }
+        .fleet-table thead th.sort-asc .sort-icon::after { content: ' ▲'; opacity: 1; }
+        .fleet-table thead th.sort-desc .sort-icon::after { content: ' ▼'; opacity: 1; }
+        .fleet-table .sort-icon { opacity: 0.3; font-size: 0.65rem; }
+
+        /* Status pills */
+        .status-pill {
+            display: inline-block; padding: 2px 10px; border-radius: 9999px;
+            font-size: 0.7rem; font-weight: 600; white-space: nowrap;
+        }
+        .status-pill.maintenance { background: #7c3aed22; color: #a78bfa; }
+        .status-pill.damage { background: #ef444422; color: #f87171; }
+        .status-pill.hold { background: #f59e0b22; color: #fbbf24; }
+        .status-pill.delivery { background: #3b82f622; color: #60a5fa; }
+        .status-pill.prep { background: #06b6d422; color: #22d3ee; }
+        .status-pill.other { background: #6b728022; color: #9ca3af; }
+
+        /* Fleet Map Markers (station dots inside expanded zones) */
+        .fleet-map-marker {
+            display: flex; align-items: center; justify-content: center;
+            border-radius: 50%; color: #fff; font-weight: 700; font-size: 11px;
+            border: 2px solid rgba(255,255,255,0.3);
+            box-shadow: 0 3px 14px rgba(0,0,0,0.5), 0 0 0 2px rgba(255,255,255,0.06);
+            text-shadow: 0 1px 2px rgba(0,0,0,0.6);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .fleet-map-marker:hover { transform: scale(1.15); box-shadow: 0 4px 18px rgba(255,95,0,0.35), 0 0 0 3px rgba(255,95,0,0.15); }
+
+        /* Zone cluster markers (big circles for grouped stations) */
+        .fleet-zone-cluster {
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            border-radius: 50%; color: #fff; font-weight: 700;
+            border: 2px solid rgba(255,255,255,0.25);
+            box-shadow: 0 4px 24px rgba(0,0,0,0.6), 0 0 0 3px rgba(255,255,255,0.08);
+            cursor: pointer; transition: transform 0.25s, box-shadow 0.25s;
+        }
+        .fleet-zone-cluster:hover { transform: scale(1.1); box-shadow: 0 6px 28px rgba(255,95,0,0.45), 0 0 0 4px rgba(255,95,0,0.2); }
+        .fleet-zone-cluster .fzc-count { font-size: 18px; line-height: 1; margin-top: 2px; }
+        .fleet-zone-cluster .fzc-label { font-size: 8px; text-transform: uppercase; letter-spacing: 0.12em; opacity: 0.85; margin-top: 2px; }
+
+        /* Individual type markers (Agente, Parque, Oficina) */
+        .fleet-map-agent, .fleet-map-depot, .fleet-map-workshop {
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            color: #fff; font-weight: 700;
+            border: 2px solid rgba(255,255,255,0.25);
+            transition: transform 0.2s, box-shadow 0.2s; cursor: pointer;
+        }
+        .fleet-map-agent {
+            border-radius: 50%;
+            box-shadow: 0 3px 16px rgba(139,92,246,0.45), 0 0 0 3px rgba(139,92,246,0.12);
+        }
+        .fleet-map-depot {
+            border-radius: 8px;
+            box-shadow: 0 3px 16px rgba(13,148,136,0.45), 0 0 0 3px rgba(13,148,136,0.12);
+        }
+        .fleet-map-workshop {
+            border-radius: 4px;
+            box-shadow: 0 3px 16px rgba(239,68,68,0.45), 0 0 0 3px rgba(239,68,68,0.12);
+            transform: rotate(45deg);
+        }
+        .fleet-map-workshop .fmi-icon, .fleet-map-workshop .fmi-count { transform: rotate(-45deg); }
+        .fleet-map-agent:hover {
+            transform: scale(1.18);
+            box-shadow: 0 5px 22px rgba(139,92,246,0.6), 0 0 0 4px rgba(139,92,246,0.2);
+        }
+        .fleet-map-depot:hover {
+            transform: scale(1.18);
+            box-shadow: 0 5px 22px rgba(13,148,136,0.6), 0 0 0 4px rgba(13,148,136,0.2);
+        }
+        .fleet-map-workshop:hover {
+            transform: scale(1.18) rotate(45deg);
+            box-shadow: 0 5px 22px rgba(239,68,68,0.6), 0 0 0 4px rgba(239,68,68,0.2);
+        }
+        .fmi-icon { font-size: 10px; line-height: 1; }
+        .fmi-count { font-size: 9px; line-height: 1; margin-top: 1px; }
+        .fleet-map-popup .leaflet-popup-content-wrapper {
+            background: #111; color: #e5e7eb; border-radius: 12px;
+            border: 1px solid #2a2a2a; box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+            padding: 0;
+        }
+        .fleet-map-popup .leaflet-popup-tip { background: #111; border: none; }
+        .fleet-map-popup .leaflet-popup-content { margin: 0; font-size: 12px; line-height: 1.5; min-width: 220px; }
+        .fmp-header { padding: 10px 14px; border-bottom: 1px solid #222; }
+        .fmp-header h4 { font-size: 13px; font-weight: 700; color: #FF5000; margin: 0; }
+        .fmp-header .fmp-sub { font-size: 10px; color: #777; margin-top: 2px; }
+        .fmp-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0; }
+        .fmp-cell { padding: 7px 14px; border-bottom: 1px solid #1a1a1a; }
+        .fmp-cell:nth-child(odd) { border-right: 1px solid #1a1a1a; }
+        .fmp-cell .fmp-val { font-size: 16px; font-weight: 700; color: #fff; }
+        .fmp-cell .fmp-lbl { font-size: 9px; color: #777; text-transform: uppercase; letter-spacing: 0.05em; }
+        .fmp-cell.fmp-accent .fmp-val { color: #FF5000; }
+        .fmp-footer { padding: 8px 14px; background: #0a0a0a; border-radius: 0 0 12px 12px; }
+        .fmp-footer .fmp-bar { height: 6px; border-radius: 3px; overflow: hidden; display: flex; background: #222; }
+        .fmp-footer .fmp-bar-seg { height: 100%; transition: width 0.3s; }
+        .fmp-footer .fmp-foot-legend { display: flex; gap: 8px; margin-top: 4px; flex-wrap: wrap; }
+        .fmp-footer .fmp-foot-legend span { font-size: 9px; color: #888; display: flex; align-items: center; gap: 3px; }
+        .fmp-footer .fmp-foot-legend i { width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
+        .dark .leaflet-control-zoom a { background: #1a1a1a; color: #e5e7eb; border-color: #333; }
+        .dark .leaflet-control-zoom a:hover { background: #FF5000; color: #fff; }
+        .dark .leaflet-control-attribution { background: rgba(0,0,0,0.6); color: #555; font-size: 9px; }
+        .dark .leaflet-control-attribution a { color: #777; }
+        #dashMapCard:fullscreen { display: flex; flex-direction: column; background: #fff; }
+        #dashMapCard:fullscreen #dashMapFrame { flex: 1; height: 100% !important; }
+        /* Zone mini cards */
+        .naf-zone-card {
+            border-radius: 10px; padding: 12px 14px; border: 1px solid #222;
+            background: #0a0a0a; transition: all 0.15s;
+        }
+        .naf-zone-card:hover { border-color: #FF5000; }
+        .naf-zone-card .nzc-title { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
+        .naf-zone-card .nzc-count { font-size: 22px; font-weight: 700; color: #fff; }
+        .naf-zone-card .nzc-sub { font-size: 10px; color: #666; }
+        /* Station list rows */
+        .naf-st-row {
+            display: grid; grid-template-columns: 1fr auto; gap: 4px;
+            padding: 8px 6px; border-bottom: 1px solid #1a1a1a; cursor: pointer;
+            transition: background 0.1s; border-radius: 6px;
+        }
+        .naf-st-row:hover { background: #1a1a1a; }
+        .naf-st-row .nst-name { font-size: 11px; font-weight: 600; color: #e5e7eb; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .naf-st-row .nst-zone { font-size: 9px; color: #777; }
+        .naf-st-row .nst-stats { display: flex; gap: 6px; align-items: center; }
+        .naf-st-row .nst-pill { font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: 6px; white-space: nowrap; }
+        .naf-st-row .nst-total { background: #FF500020; color: #FF5000; }
+        .naf-st-row .nst-avail { background: #22c55e18; color: #4ade80; }
+        .naf-st-row .nst-rent { background: #3b82f618; color: #60a5fa; }
+
+        /* VIN tooltip */
+        .naf-vin-tip { cursor: help; position: relative; }
+        .naf-vin-tip:hover::after, .naf-vin-tip:focus::after {
+            content: 'VIN: ' attr(data-vin);
+            position: absolute; bottom: 110%; left: 50%; transform: translateX(-50%);
+            background: #1f2937; color: #e5e7eb; padding: 4px 10px; border-radius: 6px;
+            font-size: 0.72rem; white-space: nowrap; z-index: 50;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3); pointer-events: none;
+        }
+
+        /* Hidden columns via CSS */
+        .fleet-table th:nth-child(34), .fleet-table td:nth-child(34),
+        .fleet-table th:nth-child(35), .fleet-table td:nth-child(35),
+        .fleet-table th:nth-child(36), .fleet-table td:nth-child(36),
+        .fleet-table th:nth-child(37), .fleet-table td:nth-child(37),
+        .fleet-table th:nth-child(38), .fleet-table td:nth-child(38),
+        .fleet-table th:nth-child(39), .fleet-table td:nth-child(39),
+        .fleet-table th:nth-child(40), .fleet-table td:nth-child(40),
+        .fleet-table th:nth-child(41), .fleet-table td:nth-child(41),
+        .fleet-table th:nth-child(42), .fleet-table td:nth-child(42),
+        .fleet-table th:nth-child(43), .fleet-table td:nth-child(43),
+        .fleet-table th:nth-child(44), .fleet-table td:nth-child(44),
+        .fleet-table th:nth-child(45), .fleet-table td:nth-child(45),
+        .fleet-table th:nth-child(46), .fleet-table td:nth-child(46),
+        .fleet-table th:nth-child(47), .fleet-table td:nth-child(47),
+        .fleet-table th:nth-child(48), .fleet-table td:nth-child(48),
+        .fleet-table th:nth-child(49), .fleet-table td:nth-child(49),
+        .fleet-table th:nth-child(50), .fleet-table td:nth-child(50),
+        .fleet-table th:nth-child(51), .fleet-table td:nth-child(51),
+        .fleet-table th:nth-child(52), .fleet-table td:nth-child(52),
+        .fleet-table th:nth-child(53), .fleet-table td:nth-child(53),
+        .fleet-table th:nth-child(54), .fleet-table td:nth-child(54),
+        .fleet-table th:nth-child(55), .fleet-table td:nth-child(55),
+        .fleet-table th:nth-child(56), .fleet-table td:nth-child(56),
+        .fleet-table th:nth-child(57), .fleet-table td:nth-child(57) {
+            display: none;
+        }
+
+        /* Multi-select dropdowns */
+        .naf-ms { position: relative; display: inline-block; }
+        .naf-ms-btn {
+            display: flex; align-items: center; gap: 0.375rem; padding: 0.375rem 0.75rem;
+            border-radius: 0.5rem; font-size: 0.8rem; cursor: pointer; white-space: nowrap;
+            border: 1px solid; transition: all 0.15s;
+        }
+        .naf-ms-panel {
+            position: absolute; top: 100%; left: 0; z-index: 40; min-width: 200px;
+            max-height: 260px; overflow-y: auto; border-radius: 0.5rem; padding: 0.25rem;
+            border: 1px solid; box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        .naf-ms-option { display: flex; align-items: center; gap: 0.375rem; padding: 0.25rem 0.5rem; font-size: 0.8rem; cursor: pointer; border-radius: 0.25rem; }
+        .naf-ms-option:hover { opacity: 0.8; }
+        .naf-ms-clear { padding: 0.25rem 0.5rem; font-size: 0.75rem; cursor: pointer; opacity: 0.6; }
+        .naf-ms-clear:hover { opacity: 1; }
+
+        /* Plate badge */
+        .plate {
+            font-weight: 700; letter-spacing: 0.05em; font-family: 'Courier New', monospace;
+            padding: 1px 6px; border-radius: 4px; font-size: 0.78rem;
+        }
+
+        /* Spinner */
+        .rena-spinner {
+            width: 2rem; height: 2rem; border: 3px solid #374151;
+            border-top-color: #FF5000; border-radius: 50%; animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* History chart buttons */
+        .hist-btn {
+            padding: 0.25rem 0.625rem; border-radius: 0.375rem; font-size: 0.7rem;
+            font-weight: 500; cursor: pointer; transition: all 0.15s;
+        }
+    </style>
+    <link rel="stylesheet" href="shared/professional.css?v=3">
+</head>
+
+<body class="bg-lynx-bg dark:bg-[#0A0A0A] text-secondary-500 dark:text-gray-100 font-sans min-h-screen">
+
+    <a class="ui-skip" href="#mainWrapper">Skip to content</a>
+
+    <!-- ══════════════ SIDEBAR ══════════════ -->
+    <aside id="sidebar" class="fixed inset-y-0 left-0 z-30 flex flex-col bg-white dark:bg-black border-r border-lynx-divider dark:border-gray-800 sidebar-closed md:translate-x-0 sb-mini">
+
+        <!-- Logo -->
+        <button type="button" id="sbLogoBtn" class="flex items-center" aria-label="Collapse menu" aria-expanded="true" aria-controls="sidebar" title="Collapse menu">
+            <img class="ui-brand-icon" src="/shared/rena.svg" width="40" height="40" alt="" aria-hidden="true">
+            <span class="sb-txt flex flex-col leading-tight">
+                <span class="ui-brand-name">RENA</span>
+                <span class="ui-brand-subtitle">Rent a Car · By Renato Pinto</span>
+            </span>
+            <svg class="ui-icon ui-brand-collapse sb-txt" aria-hidden="true"><use href="/shared/icons.svg#panel"></use></svg>
+        </button>
+
+        <div id="sbSearch">
+            <label class="ui-sr-only" for="navSearchInput">Search menu pages</label>
+            <div class="ui-search-field">
+                <svg class="ui-icon " aria-hidden="true"><use href="/shared/icons.svg#search"></use></svg>
+                <input id="navSearchInput" type="search" placeholder="Search the menu…" autocomplete="off" aria-controls="mainNavigation" title="Search pages · Ctrl+K">
+            </div>
+            <p id="navSearchEmpty" role="status" hidden>No pages found.</p>
+        </div>
+
+        <!-- Navigation -->
+        <nav id="mainNavigation" aria-label="Main navigation" class="flex-1 px-3 py-2 space-y-0.5 overflow-y-auto">
+            <!-- Grupo: Frota -->
+            <button type="button" class="nav-group-toggle w-full flex items-center justify-between px-3 pt-4 pb-1 text-[0.65rem] font-semibold uppercase tracking-wider text-secondary-300 dark:text-gray-500 hover:text-primary-500" data-group="frota">
+                <span class="flex items-center gap-2"><i class="fas fa-truck text-[0.7rem]"></i> Fleet</span>
+                <i class="fas fa-chevron-down text-[0.6rem] transition-transform"></i>
+            </button>
+            <div class="nav-group space-y-0.5" data-group-body="frota">
+                <a href="#" data-page="dashboard" class="nav-link flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors bg-primary-500/10 text-primary-500 border-l-2 border-primary-500">
+                    <svg class="ui-icon " aria-hidden="true"><use href="/shared/icons.svg#grid"></use></svg> <span class="sb-txt">Overview</span>
+                </a>
+                <a href="#" data-page="fleet" class="nav-link flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors text-gray-400 hover:bg-lynx-subtle border-l-2 border-transparent hover:text-primary-500">
+                    <svg class="ui-icon " aria-hidden="true"><use href="/shared/icons.svg#car"></use></svg> <span class="sb-txt">Fleet</span>
+                </a>
+                <a href="#" data-page="island-blocking" class="nav-link flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors text-gray-400 dark:text-gray-500 hover:bg-lynx-subtle dark:hover:bg-white/5 border-l-2 border-transparent hover:text-primary-500">
+                    <svg class="ui-icon " aria-hidden="true"><use href="/shared/icons.svg#lock"></use></svg> <span class="sb-txt">Island Transfers</span>
+                </a>
+                <a href="#" data-page="rotation" class="nav-link flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors text-gray-400 dark:text-gray-500 hover:bg-lynx-subtle dark:hover:bg-white/5 border-l-2 border-transparent hover:text-primary-500">
+                    <svg class="ui-icon " aria-hidden="true"><use href="/shared/icons.svg#transfer"></use></svg> <span class="sb-txt">Fleet Rotation</span>
+                </a>
+                <a href="#" data-page="match-vehicle" class="nav-link flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors text-gray-400 dark:text-gray-500 hover:bg-lynx-subtle dark:hover:bg-white/5 border-l-2 border-transparent hover:text-primary-500">
+                    <svg class="ui-icon " aria-hidden="true"><use href="/shared/icons.svg#match"></use></svg> <span class="sb-txt">Vehicle Match</span>
+                </a>
+            </div>
+
+            <!-- Grupo: Análise & Controlo -->
+            <button type="button" class="nav-group-toggle w-full flex items-center justify-between px-3 pt-4 pb-1 text-[0.65rem] font-semibold uppercase tracking-wider text-secondary-300 dark:text-gray-500 hover:text-primary-500" data-group="analise">
+                <span class="flex items-center gap-2"><i class="fas fa-chart-pie text-[0.7rem]"></i> Analysis &amp; Control</span>
+                <i class="fas fa-chevron-down text-[0.6rem] transition-transform"></i>
+            </button>
+            <div class="nav-group space-y-0.5" data-group-body="analise">
+                <a href="#" data-page="analytics" class="nav-link flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors text-gray-400 dark:text-gray-500 hover:bg-lynx-subtle dark:hover:bg-white/5 border-l-2 border-transparent hover:text-primary-500">
+                    <svg class="ui-icon " aria-hidden="true"><use href="/shared/icons.svg#chart"></use></svg> <span class="sb-txt">Analytics</span>
+                </a>
+                <a href="#" data-page="reservations" class="nav-link flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors text-gray-400 dark:text-gray-500 hover:bg-lynx-subtle dark:hover:bg-white/5 border-l-2 border-transparent hover:text-primary-500">
+                    <svg class="ui-icon " aria-hidden="true"><use href="/shared/icons.svg#calendar"></use></svg> <span class="sb-txt">Reservations</span>
+                </a>
+                <a href="#" data-page="ow-foreign" class="nav-link flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors text-gray-400 dark:text-gray-500 hover:bg-lynx-subtle dark:hover:bg-white/5 border-l-2 border-transparent hover:text-primary-500">
+                    <svg class="ui-icon " aria-hidden="true"><use href="/shared/icons.svg#globe"></use></svg> <span class="sb-txt">Foreign One-Way</span>
+                </a>
+                <a href="#" data-page="duplicados" class="nav-link flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors text-gray-400 dark:text-gray-500 hover:bg-lynx-subtle dark:hover:bg-white/5 border-l-2 border-transparent hover:text-primary-500">
+                    <svg class="ui-icon " aria-hidden="true"><use href="/shared/icons.svg#copy"></use></svg> <span class="sb-txt">Duplicates</span>
+                </a>
+                <a href="#" data-page="capacity-control" class="nav-link flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors text-gray-400 dark:text-gray-500 hover:bg-lynx-subtle dark:hover:bg-white/5 border-l-2 border-transparent hover:text-primary-500">
+                    <svg class="ui-icon " aria-hidden="true"><use href="/shared/icons.svg#layers"></use></svg> <span class="sb-txt">Capacity &amp; Slots</span>
+                </a>
+            </div>
+
+            <!-- Grupo: Planeamento -->
+            <button type="button" class="nav-group-toggle w-full flex items-center justify-between px-3 pt-4 pb-1 text-[0.65rem] font-semibold uppercase tracking-wider text-secondary-300 dark:text-gray-500 hover:text-primary-500" data-group="planeamento">
+                <span class="flex items-center gap-2"><i class="fas fa-calendar-check text-[0.7rem]"></i> Planning</span>
+                <i class="fas fa-chevron-down text-[0.6rem] transition-transform"></i>
+            </button>
+            <div class="nav-group space-y-0.5" data-group-body="planeamento">
+                <a href="#" data-page="planning" class="nav-link flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors text-gray-400 dark:text-gray-500 hover:bg-lynx-subtle dark:hover:bg-white/5 border-l-2 border-transparent hover:text-primary-500">
+                    <svg class="ui-icon " aria-hidden="true"><use href="/shared/icons.svg#planning"></use></svg> <span class="sb-txt">Planning</span>
+                </a>
+            </div>
+        </nav>
+
+        <!-- Status strip (acima das Settings) -->
+        <div id="sbStatusStrip" class="px-3 py-2.5 border-t border-lynx-divider space-y-1">
+            <div class="flex items-center gap-1.5 text-xs text-gray-400 truncate">
+                <i id="statusFleetIcon" class="fas fa-truck text-[0.6rem] flex-shrink-0"></i>
+                <span id="statusFleetCapture" class="truncate">—</span>
+            </div>
+            <div class="flex items-center gap-1.5 text-xs text-gray-400 truncate">
+                <i id="statusMasterdataIcon" class="fas fa-bell text-[0.6rem] flex-shrink-0"></i>
+                <span id="statusMasterdataCapture" class="truncate">—</span>
+            </div>
+            <div class="flex items-center gap-1.5 text-xs text-gray-400 truncate">
+                <i id="statusResIcon" class="fas fa-calendar-check text-[0.6rem] flex-shrink-0"></i>
+                <span id="statusResCapture" class="truncate">—</span>
+            </div>
+
+            <!-- Reservas by station (colapsável — reutiliza o padrão nav-group) -->
+            <button type="button" class="nav-group-toggle w-full flex items-center justify-between pl-[1.35rem] pr-0 py-0.5 text-[0.6rem] font-medium uppercase tracking-wider text-gray-400 hover:text-primary-500" data-group="res-stations">
+                <span>Reservations by station</span>
+                <i class="fas fa-chevron-down text-[0.55rem] transition-transform"></i>
+            </button>
+            <div class="nav-group space-y-0.5" data-group-body="res-stations" id="statusResStations">
+                <div class="text-[0.65rem] text-gray-400 pl-[1.35rem]">—</div>
+            </div>
+
+            <div class="flex items-center gap-1.5 text-xs text-gray-400 truncate">
+                <i id="statusInfleetIcon" class="fas fa-file-excel text-[0.6rem] flex-shrink-0"></i>
+                <span id="statusInfleetCapture" class="truncate">—</span>
+            </div>
+        </div>
+
+        <!-- Settings -->
+        <div class="px-3 py-3 border-t border-lynx-divider space-y-1">
+            <a href="#" data-page="settings" class="nav-link flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-400 hover:bg-lynx-subtle hover:text-primary-500">
+                    <svg class="ui-icon " aria-hidden="true"><use href="/shared/icons.svg#settings"></use></svg> <span class="sb-txt">Settings</span>
+                </a>
+        </div>
+
+        <!-- User -->
+        <div id="sbUserArea" class="px-4 py-3 border-t border-lynx-divider flex items-center gap-3">
+            <div id="sidebarUserPhotoWrap" class="w-8 h-8 rounded-full bg-primary-500/15 flex items-center justify-center overflow-hidden flex-shrink-0">
+                <i class="fas fa-user text-primary-500 text-xs" id="sidebarUserIcon"></i>
+            </div>
+            <div class="sb-txt flex-1 min-w-0">
+                <div class="text-sm font-medium text-secondary-500 truncate" id="sidebarUsername">—</div>
+                <div class="text-xs text-gray-400 truncate" id="sidebarUserRole">—</div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- ══════════════ MAIN ══════════════ -->
+    <div id="mainWrapper" tabindex="-1" class="min-h-screen flex flex-col sb-mini-main">
+
+        <!-- Demo sync warning banner -->
+        <div role="status" id="onedriveBanner" class="hidden sticky top-0 z-50 bg-amber-600 text-white text-xs font-semibold px-4 py-1.5 flex items-center gap-2">
+            <i class="fas fa-exclamation-triangle"></i>
+            <span id="onedriveMsg">The demo may not be synchronized; cached data may be out of date.</span>
+            <button onclick="document.getElementById('onedriveBanner').classList.add('hidden')" class="ml-auto opacity-70 hover:opacity-100" aria-label="Dismiss synchronization notice">✕</button>
+        </div>
+
+        <header id="appHeader">
+            <button id="sidebarToggle" class="ui-icon-button" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="sidebar"><svg class="ui-icon " aria-hidden="true"><use href="/shared/icons.svg#menu"></use></svg></button>
+            <div class="ui-heading">
+                <h1 id="appPageTitle">Overview</h1>
+                <p id="appPageDescription">Key operational indicators in one place.</p>
+            </div>
+            <div class="ui-header-actions">
+                <button id="themeToggle" class="ui-icon-button" type="button" aria-label="Switch to dark mode" title="Switch to dark mode"><svg class="ui-icon " aria-hidden="true"><use href="/shared/icons.svg#moon"></use></svg></button>
+            </div>
+        </header>
+
+        <!-- Open pages -->
+        <div id="tabBar" class="sticky top-0 z-40 border-b border-lynx-divider bg-white dark:bg-black overflow-x-auto flex-shrink-0 flex items-end">
+            <div role="group" aria-label="Open pages" id="tabBarInner" class="flex items-end gap-0 px-2 pt-1 min-w-0 h-9 flex-1"></div>
+        </div>
+
+        <!-- ══════════════ PAGE: DASHBOARD ══════════════ -->
+        <main id="pageDashboard" class="flex-1 p-6 space-y-6">
+
+            <!-- Row 1: Primary KPI Cards -->
+            <section>
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-lg font-semibold lynx-text-primary">Fleet Overview</h2>
+                    <span class="text-xs text-gray-400" id="dashCapturedLabel"></span>
+                </div>
+                <div class="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-7 gap-4">
+                    <!-- Total Fleet -->
+                    <div class="lynx-card">
+                        <div class="flex items-center gap-2 mb-2">
+                            <div class="w-8 h-8 rounded-lg bg-primary-50 dark:bg-primary-500/10 flex items-center justify-center">
+                                <i class="fas fa-car text-primary-500 text-xs"></i>
+                            </div>
+                            <p class="text-xs font-medium text-gray-500 dark:text-gray-400">Total Fleet</p>
+                        </div>
+                        <p class="text-2xl font-bold lynx-text-primary" id="statTotalFleet">—</p>
+                        <p class="text-[0.65rem] text-gray-400 mt-0.5">vehicles in the inventory</p>
+                    </div>
+                    <!-- Disponíveis (1,2,3,4,7,11) -->
+                    <div class="lynx-card">
+                        <div class="flex items-center gap-2 mb-2">
+                            <div class="w-8 h-8 rounded-lg bg-green-50 dark:bg-green-500/10 flex items-center justify-center">
+                                <i class="fas fa-check-circle text-green-500 text-xs"></i>
+                            </div>
+                            <p class="text-xs font-medium text-gray-500 dark:text-gray-400">Available</p>
+                        </div>
+                        <p class="text-2xl font-bold text-green-600 dark:text-green-400" id="statAvailable">—</p>
+                        <p class="text-[0.65rem] text-gray-400 mt-0.5"><span id="statAvailPct">—</span>% of fleet</p>
+                    </div>
+                    <!-- Alugadas (0) -->
+                    <div class="lynx-card">
+                        <div class="flex items-center gap-2 mb-2">
+                            <div class="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center">
+                                <i class="fas fa-key text-blue-500 text-xs"></i>
+                            </div>
+                            <p class="text-xs font-medium text-gray-500 dark:text-gray-400">Rented</p>
+                        </div>
+                        <p class="text-2xl font-bold text-blue-600 dark:text-blue-400" id="statRented">—</p>
+                        <p class="text-[0.65rem] text-gray-400 mt-0.5"><span id="statRentedPct">—</span>% of fleet</p>
+                    </div>
+                    <!-- Oficina / Reparação (5,6) -->
+                    <div class="lynx-card">
+                        <div class="flex items-center gap-2 mb-2">
+                            <div class="w-8 h-8 rounded-lg bg-orange-50 dark:bg-primary-500/10 flex items-center justify-center">
+                                <i class="fas fa-tools text-primary-500 text-xs"></i>
+                            </div>
+                            <p class="text-xs font-medium text-gray-500 dark:text-gray-400">Workshop</p>
+                        </div>
+                        <p class="text-2xl font-bold text-primary-500" id="statNAF">—</p>
+                        <p class="text-[0.65rem] text-gray-400 mt-0.5"><span id="statNAFPct" class="text-primary-500 font-semibold">—</span>% of fleet</p>
+                    </div>
+                    <!-- Pendentes (9,10) -->
+                    <div class="lynx-card">
+                        <div class="flex items-center gap-2 mb-2">
+                            <div class="w-8 h-8 rounded-lg bg-amber-50 dark:bg-amber-500/10 flex items-center justify-center">
+                                <i class="fas fa-hourglass-half text-amber-500 text-xs"></i>
+                            </div>
+                            <p class="text-xs font-medium text-gray-500 dark:text-gray-400">Pending</p>
+                        </div>
+                        <p class="text-2xl font-bold text-amber-600 dark:text-amber-400" id="statPendentes">—</p>
+                        <p class="text-[0.65rem] text-gray-400 mt-0.5"><span id="statPendentesPct">—</span>% of fleet</p>
+                    </div>
+                    <!-- Devolução (45) -->
+                    <div class="lynx-card">
+                        <div class="flex items-center gap-2 mb-2">
+                            <div class="w-8 h-8 rounded-lg bg-purple-50 dark:bg-purple-500/10 flex items-center justify-center">
+                                <i class="fas fa-undo text-purple-500 text-xs"></i>
+                            </div>
+                            <p class="text-xs font-medium text-gray-500 dark:text-gray-400">Return</p>
+                        </div>
+                        <p class="text-2xl font-bold text-purple-600 dark:text-purple-400" id="statDevolucao">—</p>
+                        <p class="text-[0.65rem] text-gray-400 mt-0.5"><span id="statDevolucaoPct">—</span>% of fleet</p>
+                    </div>
+                    <!-- Outros (matrículas não-PT) -->
+                    <div class="lynx-card">
+                        <div class="flex items-center gap-2 mb-2">
+                            <div class="w-8 h-8 rounded-lg bg-lynx-subtle dark:bg-gray-500/10 flex items-center justify-center">
+                                <i class="fas fa-globe text-gray-400 text-xs"></i>
+                            </div>
+                            <p class="text-xs font-medium text-gray-500 dark:text-gray-400">Other</p>
+                        </div>
+                        <p class="text-2xl font-bold text-gray-500 dark:text-gray-400" id="statOutros">—</p>
+                        <p class="text-[0.65rem] text-gray-400 mt-0.5">foreign / test vehicles</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Row 2: Fleet Health Bar -->
+            <section class="lynx-card lynx-card-p5" id="dashHealthSection" style="display:none">
+                <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3"><i class="fas fa-heartbeat mr-1"></i> Fleet Health</h3>
+                <div class="w-full h-6 rounded-full overflow-hidden flex" id="dashHealthBar" title="Fleet distribution by status"></div>
+                <div class="flex flex-wrap gap-x-5 gap-y-1 mt-2" id="dashHealthLegend"></div>
+            </section>
+
+            <!-- Demo station map -->
+            <section class="space-y-4" id="dashMapSection">
+                <div class="lynx-card overflow-hidden p-0" id="dashMapCard">
+                    <div class="flex items-center justify-between px-4 py-2.5 border-b border-lynx-divider">
+                        <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wider"><i class="fas fa-map-location-dot mr-1"></i> Demo Station Map</h3>
+                        <button id="dashMapFullscreenBtn" type="button" class="text-xs px-2.5 py-1 rounded-lg border border-lynx-divider text-gray-500 hover:text-primary-500 hover:border-primary-400 transition-colors flex items-center gap-1.5">
+                            <i class="fas fa-expand"></i> Full screen
+                        </button>
+                    </div>
+                    <iframe id="dashMapFrame" src="/stations_map.html?v=2" style="width:100%;height:640px;border:0;display:block" title="Demo Station Map"></iframe>
+                </div>
+            </section>
+
+        </main>
+
+        <script>
+            (function () {
+                const card = document.getElementById('dashMapCard');
+                const btn  = document.getElementById('dashMapFullscreenBtn');
+                if (!card || !btn) return;
+                btn.addEventListener('click', () => {
+                    if (!document.fullscreenElement) {
+                        card.requestFullscreen?.() || card.webkitRequestFullscreen?.();
+                    } else {
+                        document.exitFullscreen?.() || document.webkitExitFullscreen?.();
+                    }
+                });
+                document.addEventListener('fullscreenchange', () => {
+                    const isFull = document.fullscreenElement === card;
+                    const frame = document.getElementById('dashMapFrame');
+                    if (frame) frame.style.height = isFull ? '100vh' : '640px';
+                    btn.innerHTML = isFull
+                        ? "<i class=\"fas fa-compress\"></i> Exit full screen"
+                        : "<i class=\"fas fa-expand\"></i> Full screen";
+                });
+            })();
+        </script>
+
+        <!-- ══════════════ PAGE: ANALYTICS ══════════════ -->
+        <main id="pageAnalytics" class="flex-1 p-6 space-y-6" style="display:none">
+
+            <div class="flex items-center justify-between mb-2">
+                <h2 class="text-lg font-semibold lynx-text-primary">Detailed Analysis</h2>
+                <span class="text-xs text-gray-400" id="analyticsCapturedLabel"></span>
+            </div>
+
+            <!-- KPI Group: Frota Geral -->
+            <section id="analyticsOpsCards" style="display:none">
+                <p class="text-[0.6rem] font-semibold text-gray-500 uppercase tracking-widest mb-2"><i class="fas fa-th-large mr-1"></i>Fleet Overview</p>
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <!-- Oficina -->
+                    <div class="lynx-card text-center cursor-pointer hover:ring-2 hover:ring-primary-500 transition-all" onclick="nafShowDetailList('oficina')">
+                        <div class="w-7 h-7 mx-auto mb-2 rounded-lg bg-orange-50 dark:bg-orange-500/10 flex items-center justify-center">
+                            <i class="fas fa-wrench text-orange-500 text-xs"></i>
+                        </div>
+                        <p class="text-[0.65rem] text-gray-400 mb-0.5">Workshop</p>
+                        <p class="text-lg font-bold lynx-text-primary" id="statOficinaTotal">—</p>
+                    </div>
+                    <!-- To Defleet -->
+                    <div class="lynx-card text-center cursor-pointer hover:ring-2 hover:ring-primary-500 transition-all" onclick="nafShowDetailList('defleet')">
+                        <div class="w-7 h-7 mx-auto mb-2 rounded-lg bg-yellow-50 dark:bg-yellow-500/10 flex items-center justify-center">
+                            <i class="fas fa-sign-out-alt text-yellow-500 text-xs"></i>
+                        </div>
+                        <p class="text-[0.65rem] text-gray-400 mb-0.5">To Defleet</p>
+                        <p class="text-lg font-bold lynx-text-primary" id="statDefleet">—</p>
+                    </div>
+                    <!-- Infleet -->
+                    <div class="lynx-card text-center cursor-pointer hover:ring-2 hover:ring-primary-500 transition-all" onclick="nafShowDetailList('infleet')">
+                        <div class="w-7 h-7 mx-auto mb-2 rounded-lg bg-teal-50 dark:bg-teal-500/10 flex items-center justify-center">
+                            <i class="fas fa-sign-in-alt text-teal-500 text-xs"></i>
+                        </div>
+                        <p class="text-[0.65rem] text-gray-400 mb-0.5">Infleet</p>
+                        <p class="text-lg font-bold lynx-text-primary" id="statInfleet">—</p>
+                    </div>
+                    <!-- Long-Term -->
+                    <div class="lynx-card text-center cursor-pointer hover:ring-2 hover:ring-primary-500 transition-all" onclick="nafShowDetailList('longterm')">
+                        <div class="w-7 h-7 mx-auto mb-2 rounded-lg bg-indigo-50 dark:bg-indigo-500/10 flex items-center justify-center">
+                            <i class="fas fa-file-contract text-indigo-500 text-xs"></i>
+                        </div>
+                        <p class="text-[0.65rem] text-gray-400 mb-0.5">Long-Term</p>
+                        <p class="text-lg font-bold lynx-text-primary" id="statLongterm">—</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- KPI Group: Oficina — Paradas -->
+            <section id="analyticsOpsCards2" style="display:none">
+                <p class="text-[0.6rem] font-semibold text-gray-500 uppercase tracking-widest mb-2"><i class="fas fa-hourglass-half mr-1"></i>Idle Vehicles (Overall)</p>
+                <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    <!-- Paradas 7d -->
+                    <div class="lynx-card text-center cursor-pointer hover:ring-2 hover:ring-amber-500 transition-all" onclick="nafShowDetailList('stuck7')">
+                        <div class="w-7 h-7 mx-auto mb-2 rounded-lg bg-amber-50 dark:bg-amber-500/10 flex items-center justify-center">
+                            <i class="fas fa-hourglass-start text-amber-500 text-xs"></i>
+                        </div>
+                        <p class="text-[0.65rem] text-gray-400 mb-0.5">Paradas >7d</p>
+                        <p class="text-lg font-bold lynx-text-primary" id="statStuck7">—</p>
+                    </div>
+                    <!-- Paradas 15d -->
+                    <div class="lynx-card text-center cursor-pointer hover:ring-2 hover:ring-rose-500 transition-all" onclick="nafShowDetailList('stuck15')">
+                        <div class="w-7 h-7 mx-auto mb-2 rounded-lg bg-rose-50 dark:bg-rose-500/10 flex items-center justify-center">
+                            <i class="fas fa-hourglass-half text-rose-400 text-xs"></i>
+                        </div>
+                        <p class="text-[0.65rem] text-gray-400 mb-0.5">Paradas >15d</p>
+                        <p class="text-lg font-bold lynx-text-primary" id="statStuck15">—</p>
+                    </div>
+                    <!-- Paradas 30d -->
+                    <div class="lynx-card text-center cursor-pointer hover:ring-2 hover:ring-red-500 transition-all" onclick="nafShowDetailList('stuck30')">
+                        <div class="w-7 h-7 mx-auto mb-2 rounded-lg bg-red-50 dark:bg-red-500/10 flex items-center justify-center">
+                            <i class="fas fa-hourglass-end text-red-500 text-xs"></i>
+                        </div>
+                        <p class="text-[0.65rem] text-gray-400 mb-0.5">Paradas >30d</p>
+                        <p class="text-lg font-bold lynx-text-primary" id="statStuck30">—</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- KPI Group: Defleet & Perto de Devolução -->
+            <section id="analyticsOpsCards3" style="display:none">
+                <p class="text-[0.6rem] font-semibold text-gray-500 uppercase tracking-widest mb-2"><i class="fas fa-truck-loading mr-1"></i>Defleet & Upcoming Returns</p>
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <!-- Defleet <10 dias (já com subStatus DEFLEET) -->
+                    <div class="lynx-card text-center cursor-pointer hover:ring-2 hover:ring-red-500 transition-all" onclick="nafShowDetailList('defleet_urgent_days')">
+                        <div class="w-7 h-7 mx-auto mb-2 rounded-lg bg-red-50 dark:bg-red-500/10 flex items-center justify-center">
+                            <i class="fas fa-calendar-times text-red-500 text-xs"></i>
+                        </div>
+                        <p class="text-[0.65rem] text-gray-400 mb-0.5">Defleet &lt;10 days</p>
+                        <p class="text-lg font-bold lynx-text-primary" id="statDefleetUrgentDays">—</p>
+                    </div>
+                    <!-- Defleet <500 km (já com subStatus DEFLEET) -->
+                    <div class="lynx-card text-center cursor-pointer hover:ring-2 hover:ring-red-500 transition-all" onclick="nafShowDetailList('defleet_urgent_km')">
+                        <div class="w-7 h-7 mx-auto mb-2 rounded-lg bg-red-50 dark:bg-red-500/10 flex items-center justify-center">
+                            <i class="fas fa-tachometer-alt text-red-500 text-xs"></i>
+                        </div>
+                        <p class="text-[0.65rem] text-gray-400 mb-0.5">Defleet &lt;500 km</p>
+                        <p class="text-lg font-bold lynx-text-primary" id="statDefleetUrgentKm">—</p>
+                    </div>
+                    <!-- Perto de Devolução — data (qualquer status) -->
+                    <div class="lynx-card text-center cursor-pointer hover:ring-2 hover:ring-orange-400 transition-all" onclick="nafShowDetailList('near_return_days')">
+                        <div class="w-7 h-7 mx-auto mb-2 rounded-lg bg-orange-50 dark:bg-orange-400/10 flex items-center justify-center">
+                            <i class="fas fa-calendar-day text-orange-400 text-xs"></i>
+                        </div>
+                        <p class="text-[0.65rem] text-gray-400 mb-0.5">Upcoming Return &lt;30d</p>
+                        <p class="text-lg font-bold lynx-text-primary" id="statNearReturnDays">—</p>
+                    </div>
+                    <!-- Perto de Devolução — km (qualquer status) -->
+                    <div class="lynx-card text-center cursor-pointer hover:ring-2 hover:ring-orange-400 transition-all" onclick="nafShowDetailList('near_return_km')">
+                        <div class="w-7 h-7 mx-auto mb-2 rounded-lg bg-orange-50 dark:bg-orange-400/10 flex items-center justify-center">
+                            <i class="fas fa-road text-orange-400 text-xs"></i>
+                        </div>
+                        <p class="text-[0.65rem] text-gray-400 mb-0.5">Upcoming Return &lt;2000km</p>
+                        <p class="text-lg font-bold lynx-text-primary" id="statNearReturnKm">—</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- No data placeholder -->
+            <div id="analyticsNoData" class="flex flex-col items-center justify-center py-20 text-gray-400">
+                <i class="fas fa-chart-bar text-4xl mb-4 text-gray-300 dark:text-gray-600"></i>
+                <p class="text-sm font-medium">No data available for analysis</p>
+                <p class="text-xs mt-1">Open the Fleet page to load the data first.</p>
+            </div>
+
+            <!-- Charts row 1: Oficina por Local + Pool por Zona -->
+            <section class="grid grid-cols-1 lg:grid-cols-2 gap-6" id="analyticsRow1" style="display:none">
+                <div class="lynx-card lynx-card-p5">
+                    <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
+                        <i class="fas fa-wrench mr-1"></i> Workshop Vehicles by Location (Status 05/06)
+                    </h3>
+                    <div class="relative" style="min-height:200px"><canvas id="nafChartOficinaLocal"></canvas></div>
+                    <div id="nafOficinaLocalLegend" class="mt-3 space-y-1"></div>
+                </div>
+                <div class="lynx-card lynx-card-p5">
+                    <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
+                        <i class="fas fa-map-marker-alt mr-1"></i> Vehicles by Zone
+                    </h3>
+                    <div class="relative" style="height:280px"><canvas id="nafChartPool"></canvas></div>
+                    <div id="nafPoolLegend" class="mt-3 space-y-1"></div>
+                </div>
+            </section>
+
+            <!-- Charts row 2: FuelType + Categories (ACRISS) -->
+            <section class="grid grid-cols-1 lg:grid-cols-2 gap-6" id="analyticsRow2" style="display:none">
+                <div class="lynx-card lynx-card-p5">
+                    <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
+                        <i class="fas fa-gas-pump mr-1"></i> Powertrain Type
+                    </h3>
+                    <div class="relative" style="height:260px"><canvas id="nafChartFuelType"></canvas></div>
+                    <div id="nafFuelLegend" class="mt-3 space-y-1"></div>
+                </div>
+                <div class="lynx-card lynx-card-p5">
+                    <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
+                        <i class="fas fa-th-large mr-1"></i> ACRISS Groups by Category
+                    </h3>
+                    <div class="relative" style="height:280px"><canvas id="nafChartCategory"></canvas></div>
+                    <div id="nafCategoryLegend" class="mt-3 space-y-1 max-h-60 overflow-y-auto"></div>
+                </div>
+            </section>
+
+            <!-- Charts row 3: Oficina SubStatus + Long-Term por Zona -->
+            <section class="grid grid-cols-1 lg:grid-cols-2 gap-6" id="analyticsRow3" style="display:none">
+                <div class="lynx-card lynx-card-p5">
+                    <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
+                        <i class="fas fa-chart-pie mr-1"></i> Unavailability Reasons
+                    </h3>
+                    <div class="relative" style="height:260px"><canvas id="nafChartSubStatus"></canvas></div>
+                    <div id="nafSubStatusLegend" class="mt-3 space-y-1"></div>
+                </div>
+                <div class="lynx-card lynx-card-p5">
+                    <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
+                        <i class="fas fa-file-contract mr-1"></i> Long-Term Rentals by Zone
+                    </h3>
+                    <div class="relative" style="height:260px"><canvas id="nafChartLongterm"></canvas></div>
+                    <div id="nafLongtermLegend" class="mt-3 space-y-1"></div>
+                </div>
+            </section>
+
+            <!-- Blocked vehicles section -->
+            <section id="analyticsBlockedSection" style="display:none">
+                <p class="text-[0.6rem] font-semibold text-gray-500 uppercase tracking-widest mb-2"><i class="fas fa-lock mr-1 text-red-500"></i>Vehicles on Hold (Alerts)</p>
+                <div class="lynx-card lynx-card-p5">
+                    <div class="flex items-center justify-between mb-3">
+                        <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                            <i class="fas fa-ban mr-1 text-red-400"></i> Vehicle Holds by Reason
+                        </h3>
+                        <span class="text-sm font-bold lynx-text-primary" id="statBlockedTotal">—</span>
+                    </div>
+                    <div id="nafBlockedGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3"></div>
+                    <div class="relative mt-4" style="height:300px"><canvas id="nafChartBlocked"></canvas></div>
+                </div>
+            </section>
+
+        </main>
+
+        <!-- Vehicle Detail List Modal -->
+        <div id="nafDetailModal" class="fixed inset-0 z-50 hidden" onclick="if(event.target===this)nafCloseDetailList()">
+            <div class="absolute inset-0 bg-black/50 backdrop-blur-sm"></div>
+            <div class="relative mx-auto mt-16 mb-8 w-full max-w-5xl lynx-surface rounded-xl shadow-2xl border border-lynx-divider dark:border-gray-800 flex flex-col" style="max-height:80vh">
+                <div class="flex items-center justify-between px-6 py-4 border-b border-lynx-divider dark:border-gray-700">
+                    <h3 class="text-sm font-semibold lynx-text-primary" id="nafDetailTitle">Vehicles</h3>
+                    <button onclick="nafCloseDetailList()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200" aria-label="Close"><i class="fas fa-times"></i></button>
+                </div>
+                <div class="overflow-auto flex-1 px-6 py-4">
+                    <table class="w-full text-xs">
+                        <thead id="nafDetailHead">
+                            <tr class="text-left text-gray-400 border-b border-lynx-divider dark:border-gray-700">
+                                <th class="pb-2 pr-3">License Plate</th>
+                                <th class="pb-2 pr-3">Vehicle</th>
+                                <th class="pb-2 pr-3">Group</th>
+                                <th class="pb-2 pr-3">Sub-Status</th>
+                                <th class="pb-2 pr-3">Branch</th>
+                                <th class="pb-2 pr-3">Days</th>
+                                <th class="pb-2 pr-3">VIN</th>
+                            </tr>
+                        </thead>
+                        <tbody id="nafDetailBody" class="lynx-text-primary dark:text-gray-200"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ══════════════ PAGE: FLEET ══════════════ -->
+        <main id="pageFleet" class="flex-1 p-6 space-y-4" style="display:none">
+
+            <!-- Token/Bearer banners -->
+            <div id="nafTokenExpiredBanner" class="hidden items-center gap-3 px-4 py-3 rounded-lg bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 text-sm">
+                <i class="fas fa-lock"></i>
+                <span>Demo session expired — clica <strong>Renew</strong> to sign in again.</span>
+                <button onclick="nafOpenLynxRefresh()" class="ml-auto px-3 py-1 bg-red-500 text-white rounded-lg text-xs font-medium hover:bg-red-600"><i class="fas fa-rotate-right mr-1"></i> Renew</button>
+            </div>
+            <div id="nafNoBearerBanner" class="hidden items-center gap-3 px-4 py-3 rounded-lg bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 text-sm">
+                <i class="fas fa-link"></i>
+                <span>No snapshot is available for this session.</span>
+                <button onclick="nafOpenLynxRefresh()" class="ml-auto px-3 py-1 bg-blue-500 text-white rounded-lg text-xs font-medium hover:bg-blue-600"><i class="fas fa-arrow-up-right-from-square mr-1"></i> Open Demo</button>
+            </div>
+            <!-- Shared-fetch banner — shown when another user is currently fetching fleet data -->
+            <div id="nafSharedFetchBanner" style="display:none" class="items-center gap-3 px-4 py-3 rounded-lg bg-yellow-50 dark:bg-yellow-500/10 border border-yellow-200 dark:border-yellow-800 text-yellow-700 dark:text-yellow-300 text-sm">
+                <i class="fas fa-arrows-rotate fa-spin"></i>
+                <span>Another user is refreshing the fleet…</span>
+            </div>
+
+            <!-- Plate conflict banner -->
+            <div id="nafPlateConflictBanner" class="hidden items-center gap-3 px-4 py-3 rounded-lg bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-300 text-sm">
+                <i class="fas fa-triangle-exclamation"></i>
+                <span id="nafPlateConflictText">Some license plates have multiple internal IDs. Review the records.</span>
+                <button onclick="nafShowPlateConflicts()" class="ml-auto px-3 py-1 bg-amber-500 text-white rounded-lg text-xs font-medium hover:bg-amber-600"><i class="fas fa-check-double mr-1"></i> Resolve</button>
+            </div>
+
+            <!-- Filter bar -->
+            <div class="flex flex-wrap items-center gap-2 lynx-surface rounded-xl border border-lynx-divider dark:border-gray-800 p-3 shadow-sm">
+                <div class="naf-ms" id="nafFilterCategory" data-placeholder="All reasons">
+                    <button class="naf-ms-btn bg-lynx-subtle dark:bg-[#1A1A1A] border-lynx-divider dark:border-gray-800 text-gray-600 dark:text-gray-300" type="button" onclick="nafMsToggle('nafFilterCategory')">
+                        <span class="naf-ms-label">All reasons</span><i class="fas fa-chevron-down text-xs ml-1"></i>
+                    </button>
+                    <div class="naf-ms-panel lynx-surface border-lynx-divider dark:border-gray-800" style="display:none"></div>
+                </div>
+                <div class="naf-ms" id="nafFilterStatus" data-placeholder="All statuses">
+                    <button class="naf-ms-btn bg-lynx-subtle dark:bg-[#1A1A1A] border-lynx-divider dark:border-gray-800 text-gray-600 dark:text-gray-300" type="button" onclick="nafMsToggle('nafFilterStatus')">
+                        <span class="naf-ms-label">All statuses</span><i class="fas fa-chevron-down text-xs ml-1"></i>
+                    </button>
+                    <div class="naf-ms-panel lynx-surface border-lynx-divider dark:border-gray-800" style="display:none"></div>
+                </div>
+                <div class="naf-ms" id="nafFilterPool" data-placeholder="All pools">
+                    <button class="naf-ms-btn bg-lynx-subtle dark:bg-[#1A1A1A] border-lynx-divider dark:border-gray-800 text-gray-600 dark:text-gray-300" type="button" onclick="nafMsToggle('nafFilterPool')">
+                        <span class="naf-ms-label">All pools</span><i class="fas fa-chevron-down text-xs ml-1"></i>
+                    </button>
+                    <div class="naf-ms-panel lynx-surface border-lynx-divider dark:border-gray-800" style="display:none"></div>
+                </div>
+                <div class="naf-ms" id="nafFilterBranch" data-placeholder="All branches">
+                    <button class="naf-ms-btn bg-lynx-subtle dark:bg-[#1A1A1A] border-lynx-divider dark:border-gray-800 text-gray-600 dark:text-gray-300" type="button" onclick="nafMsToggle('nafFilterBranch')">
+                        <span class="naf-ms-label">All branches</span><i class="fas fa-chevron-down text-xs ml-1"></i>
+                    </button>
+                    <div class="naf-ms-panel lynx-surface border-lynx-divider dark:border-gray-800" style="display:none"></div>
+                </div>
+                <div class="naf-ms" id="nafFilterGroup" data-placeholder="All groups">
+                    <button class="naf-ms-btn bg-lynx-subtle dark:bg-[#1A1A1A] border-lynx-divider dark:border-gray-800 text-gray-600 dark:text-gray-300" type="button" onclick="nafMsToggle('nafFilterGroup')">
+                        <span class="naf-ms-label">All groups</span><i class="fas fa-chevron-down text-xs ml-1"></i>
+                    </button>
+                    <div class="naf-ms-panel lynx-surface border-lynx-divider dark:border-gray-800" style="display:none"></div>
+                </div>
+                <input type="date" id="nafFilterReturnDate" title="Filter by return date" onchange="nafApplyFilters()"
+                    class="w-36 px-2 py-1.5 text-sm rounded-lg bg-lynx-subtle dark:bg-[#1A1A1A] border border-lynx-divider dark:border-gray-800 text-gray-700 dark:text-gray-300 focus:ring-2 focus:ring-primary-500 outline-none">
+                <div class="naf-ms" id="nafFilterReturnStation" data-placeholder="Return station">
+                    <button class="naf-ms-btn bg-lynx-subtle dark:bg-[#1A1A1A] border-lynx-divider dark:border-gray-800 text-gray-600 dark:text-gray-300" type="button" onclick="nafMsToggle('nafFilterReturnStation')">
+                        <span class="naf-ms-label">Return station</span><i class="fas fa-chevron-down text-xs ml-1"></i>
+                    </button>
+                    <div class="naf-ms-panel lynx-surface border-lynx-divider dark:border-gray-800" style="display:none"></div>
+                </div>
+                <input type="text" id="nafSearch" placeholder="Search..." oninput="nafApplyFilters()"
+                    class="w-40 px-3 py-1.5 text-sm rounded-lg bg-lynx-subtle dark:bg-[#1A1A1A] border border-lynx-divider dark:border-gray-800 text-gray-700 dark:text-gray-300 focus:ring-2 focus:ring-primary-500 outline-none">
+                <button id="nafRefreshBtn" onclick="nafRefresh()" data-lynx-only class="ml-auto flex items-center gap-2 px-4 py-1.5 bg-primary-500 text-white rounded-lg text-sm font-medium hover:bg-primary-600 transition-colors">
+                    <i class="fas fa-sync-alt" id="nafRefreshIcon"></i> Refresh
+                </button>
+            </div>
+
+            <!-- State containers -->
+            <div id="nafStateLoading" class="hidden flex-col items-center justify-center py-20 text-gray-400">
+                <div class="rena-spinner mb-4"></div>
+                <p class="text-sm">Loading demo data…</p>
+            </div>
+            <div id="nafStateNoData" class="flex flex-col items-center justify-center py-20 text-gray-400">
+                <i class="fas fa-plug text-4xl mb-4 text-gray-300 dark:text-gray-600"></i>
+                <p class="text-sm font-medium">No demo snapshot available</p>
+                <p class="text-xs mt-1 text-gray-400">Click <strong>Open Demo</strong> to load the data automatically.</p>
+                <button onclick="nafOpenLynxRefresh()" class="mt-3 px-4 py-2 bg-primary-500 text-white rounded-lg text-sm font-medium hover:bg-primary-600">
+                    <i class="fas fa-arrow-up-right-from-square mr-1"></i> Open Demo
+                </button>
+            </div>
+            <div id="nafStateError" class="hidden flex-col items-center justify-center py-20 text-gray-400">
+                <i class="fas fa-exclamation-triangle text-4xl mb-4 text-red-400"></i>
+                <p class="text-sm" id="nafStateErrorMsg">Could not load the data.</p>
+            </div>
+
+            <!-- MasterData enrichment progress banner -->
+            <div id="nafMdProgress" class="hidden items-center gap-3 px-4 py-2.5 mb-2 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 text-sm text-blue-700 dark:text-blue-300">
+                <div class="rena-spinner" style="width:16px;height:16px;border-width:2px"></div>
+                <div class="flex-1">
+                    <span id="nafMdProgressText">A atualizar alarmes e cores...</span>
+                    <div class="mt-1 w-full bg-blue-200 dark:bg-blue-800 rounded-full h-1.5">
+                        <div id="nafMdProgressBar" class="bg-blue-500 h-1.5 rounded-full transition-all duration-300" style="width:0%"></div>
+                    </div>
+                </div>
+                <span id="nafMdProgressPct" class="text-xs font-mono font-semibold tabular-nums">0%</span>
+            </div>
+
+            <!-- Table section -->
+            <div id="nafTableSection" class="lynx-card" style="display:none">
+                <div class="flex items-center justify-between px-4 py-3 border-b border-lynx-divider dark:border-gray-700">
+                    <span class="text-sm font-medium text-gray-500 dark:text-gray-400" id="nafResultsCount"></span>
+                    <span class="text-sm font-bold lynx-text-primary" id="nafTotalBadge"></span>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="fleet-table naf-table" id="nafTable">
+                        <thead>
+                            <tr class="bg-lynx-subtle dark:bg-black text-gray-500 dark:text-gray-400 border-b border-lynx-divider dark:border-gray-800">
+                                <th onclick="nafSort('licensePlate')" data-col="licensePlate">License Plate <span class="sort-icon"></span></th>
+                                <th onclick="nafSort('_alarme')" data-col="_alarme">Alert <span class="sort-icon"></span></th>
+                                <th onclick="nafSort('displayName')" data-col="displayName">Manufacturer / Model <span class="sort-icon"></span></th>
+                                <th onclick="nafSort('acrissCode')" data-col="acrissCode">ACRISS <span class="sort-icon"></span></th>
+                                <th onclick="nafSort('pickupBranch')" data-col="pickupBranch">Pickup Branch <span class="sort-icon"></span></th>
+                                <th onclick="nafSort('rentalPickup')" data-col="rentalPickup">Pickup Date <span class="sort-icon"></span></th>
+                                <th onclick="nafSort('returnBranch')" data-col="returnBranch">Return Branch <span class="sort-icon"></span></th>
+                                <th onclick="nafSort('rentalReturn')" data-col="rentalReturn">Return Date <span class="sort-icon"></span></th>
+                                <th onclick="nafSort('defleetDate')" data-col="defleetDate">RLD <span class="sort-icon"></span></th>
+                                <th onclick="nafSort('mileage')" data-col="mileage">Current km <span class="sort-icon"></span></th>
+                                <th onclick="nafSort('remainingMileage')" data-col="remainingMileage">Remaining km <span class="sort-icon"></span></th>
+                                <th onclick="nafSort('maxMileage')" data-col="maxMileage">Max km <span class="sort-icon"></span></th>
+                                <th onclick="nafSort('fuelLevel')" data-col="fuelLevel">Fuel/Charge <span class="sort-icon"></span></th>
+                                <th onclick="nafSort('fuelType')" data-col="fuelType">Fuel Type <span class="sort-icon"></span></th>
+                                <th onclick="nafSort('engineType')" data-col="engineType">Engine <span class="sort-icon"></span></th>
+                                <th onclick="nafSort('transmissionType')" data-col="transmissionType">Transmission <span class="sort-icon"></span></th>
+                                <th onclick="nafSort('drivenWheels')" data-col="drivenWheels">Drivetrain <span class="sort-icon"></span></th>
+                                <th onclick="nafSort('tankVolume')" data-col="tankVolume">Tank <span class="sort-icon"></span></th>
+                                <th onclick="nafSort('isLongterm')" data-col="isLongterm">Long-Term <span class="sort-icon"></span></th>
+                                <th onclick="nafSort('_cor')" data-col="_cor">Color <span class="sort-icon"></span></th>
+                                <th onclick="nafSort('internalNumber')" data-col="internalNumber">Internal ID <span class="sort-icon"></span></th>
+                                <th onclick="nafSort('subStatus')" data-col="subStatus">SubStatus <span class="sort-icon"></span></th>
+                                <th onclick="nafSort('classicActivityCode')" data-col="classicActivityCode">Act. Code <span class="sort-icon"></span></th>
+                                <th onclick="nafSort('vehicleCategory')" data-col="vehicleCategory">Category <span class="sort-icon"></span></th>
+                                <th onclick="nafSort('vehicleType')" data-col="vehicleType">Vehicle Type <span class="sort-icon"></span></th>
+                                <th onclick="nafSort('branchPool')" data-col="branchPool">Pool <span class="sort-icon"></span></th>
+                                <th onclick="nafSort('branchRegion')" data-col="branchRegion">Region <span class="sort-icon"></span></th>
+                                <th onclick="nafSort('atBranchSince')" data-col="atBranchSince">At Branch Since <span class="sort-icon"></span></th>
+                                <th onclick="nafSort('updatedAt')" data-col="updatedAt">Updated <span class="sort-icon"></span></th>
+                                <th onclick="nafSort('rentalAgreement')" data-col="rentalAgreement">Contract No. <span class="sort-icon"></span></th>
+                                <th onclick="nafSort('rentalStatus')" data-col="rentalStatus">Rental Status <span class="sort-icon"></span></th>
+                                <th onclick="nafSort('rateCode')" data-col="rateCode">Rate Code <span class="sort-icon"></span></th>
+                                <th onclick="nafSort('navigation')" data-col="navigation">Nav <span class="sort-icon"></span></th>
+                                <th onclick="nafSort('drawBar')" data-col="drawBar">Towing <span class="sort-icon"></span></th>
+                                <th onclick="nafSort('vin')" data-col="vin">VIN <span class="sort-icon"></span></th>
+                                <th onclick="nafSort('make')" data-col="make">Manufacturer <span class="sort-icon"></span></th>
+                                <th onclick="nafSort('bodyType')" data-col="bodyType">Body Style <span class="sort-icon"></span></th>
+                                <th onclick="nafSort('classicStatus')" data-col="classicStatus">Status <span class="sort-icon"></span></th>
+                                <th onclick="nafSort('branch')" data-col="branch">Branch <span class="sort-icon"></span></th>
+                                <th onclick="nafSort('parkingSlot')" data-col="parkingSlot">Parking <span class="sort-icon"></span></th>
+                                <th onclick="nafSort('inStatusSince')" data-col="inStatusSince">Holding <span class="sort-icon"></span></th>
+                                <th onclick="nafSort('winterTires')" data-col="winterTires">Winter Tires <span class="sort-icon"></span></th>
+                                <th onclick="nafSort('holdCodeForDueDate')" data-col="holdCodeForDueDate">Hold Code <span class="sort-icon"></span></th>
+                                <th onclick="nafSort('holdDescriptionForDueDate')" data-col="holdDescriptionForDueDate">Hold Desc <span class="sort-icon"></span></th>
+                                <th onclick="nafSort('holdDueDate')" data-col="holdDueDate">Hold Due Date <span class="sort-icon"></span></th>
+                                <th onclick="nafSort('holdDueMileage')" data-col="holdDueMileage">Hold Due km <span class="sort-icon"></span></th>
+                                <th onclick="nafSort('holdCodeForMileage')" data-col="holdCodeForMileage">Hold Code km <span class="sort-icon"></span></th>
+                                <th onclick="nafSort('holdDescriptionForMileage')" data-col="holdDescriptionForMileage">Hold Desc km <span class="sort-icon"></span></th>
+                                <th onclick="nafSort('holdRemainingMileage')" data-col="holdRemainingMileage">Hold Remaining km <span class="sort-icon"></span></th>
+                                <th onclick="nafSort('hasDueBlockingHold')" data-col="hasDueBlockingHold">Block Hold <span class="sort-icon"></span></th>
+                                <th onclick="nafSort('holdsCount')" data-col="holdsCount">Nº Holds <span class="sort-icon"></span></th>
+                                <th onclick="nafSort('priority')" data-col="priority">Priority <span class="sort-icon"></span></th>
+                                <th onclick="nafSort('hasLongTermRestriction')" data-col="hasLongTermRestriction">Restr. LT <span class="sort-icon"></span></th>
+                                <th onclick="nafSort('customsCleared')" data-col="customsCleared">Customs <span class="sort-icon"></span></th>
+                                <th onclick="nafSort('passengers')" data-col="passengers">Passengers <span class="sort-icon"></span></th>
+                                <th onclick="nafSort('doors')" data-col="doors">Doors <span class="sort-icon"></span></th>
+                            </tr>
+                        </thead>
+                        <tbody id="nafTableBody" class="text-gray-700 dark:text-gray-300"></tbody>
+                    </table>
+                </div>
+                <div id="nafPagination" class="flex items-center justify-center gap-4 px-4 py-3 border-t border-lynx-divider dark:border-gray-700" style="display:none">
+                    <button class="p-2 rounded-lg hover:bg-lynx-subtle dark:hover:bg-white/5 text-gray-500 disabled:opacity-30" id="nafPagePrev" onclick="nafGoToPage(NAF_PAGE - 1)" disabled>
+                        <i class="fas fa-chevron-left"></i>
+                    </button>
+                    <span id="nafPageLabel" class="text-sm text-gray-500 dark:text-gray-400">Page 1 of 1</span>
+                    <button class="p-2 rounded-lg hover:bg-lynx-subtle dark:hover:bg-white/5 text-gray-500 disabled:opacity-30" id="nafPageNext" onclick="nafGoToPage(NAF_PAGE + 1)">
+                        <i class="fas fa-chevron-right"></i>
+                    </button>
+                </div>
+            </div>
+        </main>
+
+        <!-- ══════════════ PAGE: SETTINGS ══════════════ -->
+        <main id="pageSettings" class="flex-1 p-6 space-y-6" style="display:none">
+            <div class="flex items-center justify-between mb-2">
+                <h2 class="text-lg font-semibold lynx-text-primary"><i class="fas fa-cog mr-2 text-primary-500"></i>Settings</h2>
+                <div class="flex gap-2">
+                    <button onclick="nafSettingsReload()" class="px-3 py-1.5 text-xs rounded-lg border border-lynx-divider dark:border-gray-700 text-gray-500 hover:text-primary-500 hover:border-primary-500 transition-colors">
+                        <i class="fas fa-sync-alt mr-1"></i> Reload
+                    </button>
+                    <button onclick="nafSettingsSave()" class="px-3 py-1.5 text-xs rounded-lg bg-primary-500 text-white hover:bg-primary-600 transition-colors">
+                        <i class="fas fa-save mr-1"></i> Save Changes
+                    </button>
+                </div>
+            </div>
+
+            <div id="nafSettingsStatus" class="text-xs text-gray-400 hidden"></div>
+
+            <!-- Tabs -->
+            <div class="flex gap-2 border-b border-lynx-divider dark:border-gray-800 pb-0">
+                <button onclick="nafSettingsTab('stations')" id="settingsTabStations" class="px-4 py-2 text-sm font-medium border-b-2 border-primary-500 text-primary-500">Stations</button>
+                <button onclick="nafSettingsTab('zones')" id="settingsTabZones" class="px-4 py-2 text-sm font-medium border-b-2 border-transparent text-gray-400 hover:text-primary-500">Zones</button>
+                <button onclick="nafSettingsTab('types')" id="settingsTabTypes" class="px-4 py-2 text-sm font-medium border-b-2 border-transparent text-gray-400 hover:text-primary-500">Types</button>
+                <button onclick="nafSettingsTab('cc')" id="settingsTabCc" class="px-4 py-2 text-sm font-medium border-b-2 border-transparent text-gray-400 hover:text-primary-500">Cost Centers</button>
+                <button onclick="nafSettingsTab('bloqueio')" id="settingsTabBloqueio" class="px-4 py-2 text-sm font-medium border-b-2 border-transparent text-gray-400 hover:text-primary-500">Hold Rules</button>
+                <button onclick="nafSettingsTab('dupExcl')" id="settingsTabDupExcl" class="px-4 py-2 text-sm font-medium border-b-2 border-transparent text-gray-400 hover:text-primary-500">Duplicate Exclusions</button>
+                <button onclick="nafSettingsTab('pools')" id="settingsTabPools" class="px-4 py-2 text-sm font-medium border-b-2 border-transparent text-gray-400 hover:text-primary-500">Pools Planning</button>
+                <button onclick="nafSettingsTab('categories')" id="settingsTabCategories" class="px-4 py-2 text-sm font-medium border-b-2 border-transparent text-gray-400 hover:text-primary-500">ACRISS Categories</button>
+                <button onclick="nafSettingsTab('regions')" id="settingsTabRegions" class="px-4 py-2 text-sm font-medium border-b-2 border-transparent text-gray-400 hover:text-primary-500">Regions</button>
+                <button onclick="nafSettingsTab('brands')" id="settingsTabBrands" class="px-4 py-2 text-sm font-medium border-b-2 border-transparent text-gray-400 hover:text-primary-500">Manufacturers</button>
+                <span class="border-l border-gray-300 dark:border-gray-700 mx-1"></span>
+                <button onclick="nafSettingsTab('upgrades')" id="settingsTabUpgrades" class="px-4 py-2 text-sm font-medium border-b-2 border-transparent text-gray-400 hover:text-primary-500">Free Upgrades</button>
+                <button onclick="nafSettingsTab('distances')" id="settingsTabDistances" class="px-4 py-2 text-sm font-medium border-b-2 border-transparent text-gray-400 hover:text-primary-500">Distances</button>
+                <button onclick="nafSettingsTab('openGroups')" id="settingsTabOpenGroups" class="px-4 py-2 text-sm font-medium border-b-2 border-transparent text-gray-400 hover:text-primary-500">Accepted Groups</button>
+                <button onclick="nafSettingsTab('planParams')" id="settingsTabPlanParams" class="px-4 py-2 text-sm font-medium border-b-2 border-transparent text-gray-400 hover:text-primary-500">Planning</button>
+                <span class="border-l border-gray-300 dark:border-gray-700 mx-1" data-owner-only style="display:none"></span>
+                <button onclick="nafSettingsTab('users')" id="settingsTabUsers" data-owner-only style="display:none" class="px-4 py-2 text-sm font-medium border-b-2 border-transparent text-yellow-500 hover:text-yellow-400"><i class="fas fa-shield-halved mr-1 text-[0.6rem]"></i>Users</button>
+            </div>
+
+            <!-- Tab: Stations -->
+            <div id="settingsPanelStations" class="lynx-card">
+                <div class="flex items-center justify-between p-4 border-b border-lynx-divider dark:border-gray-800">
+                    <div class="flex items-center gap-3">
+                        <h3 class="text-sm font-semibold lynx-text-primary">Stations</h3>
+                        <span class="text-[0.65rem] text-gray-400" id="nafSettingsStationCount">0 stations</span>
+                    </div>
+                    <div class="flex gap-2">
+                        <input type="text" id="nafSettingsSearch" oninput="nafSettingsFilterTable()" placeholder="Filtrar..." class="px-3 py-1.5 text-xs rounded-lg bg-lynx-subtle dark:bg-[#1A1A1A] border border-lynx-divider dark:border-gray-700 text-gray-700 dark:text-gray-300 w-44">
+                        <button onclick="nafSettingsAddStation()" class="px-3 py-1.5 text-xs rounded-lg bg-green-500/10 text-green-500 hover:bg-green-500/20 transition-colors"><i class="fas fa-plus mr-1"></i> New</button>
+                    </div>
+                </div>
+                <div class="overflow-auto" style="max-height:65vh">
+                    <table class="w-full text-sm" id="nafSettingsTable">
+                        <thead class="sticky top-0 bg-lynx-subtle dark:bg-[#0A0A0A] text-[0.65rem] text-gray-400 uppercase tracking-wider">
+                            <tr>
+                                <th class="text-left px-3 py-2">Code</th>
+                                <th class="text-left px-3 py-2">Name</th>
+                                <th class="text-left px-3 py-2">Zone</th>
+                                <th class="text-left px-3 py-2">Type</th>
+                                <th class="text-center px-3 py-2">Lat</th>
+                                <th class="text-center px-3 py-2">Lon</th>
+                                <th class="text-left px-3 py-2">Paired</th>
+                                <th class="text-center px-3 py-2">Transp.</th>
+                                <th class="text-left px-3 py-2">Emails</th>
+                                <th class="text-left px-3 py-2">Notes</th>
+                                <th class="text-center px-3 py-2 w-12"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="nafSettingsBody" class="text-xs"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Tab: Zones -->
+            <div id="settingsPanelZones" class="lynx-card" style="display:none">
+                <h3 class="text-sm font-semibold lynx-text-primary mb-3">Zone Configuration</h3>
+                <div id="nafSettingsZonesBody" class="space-y-3"></div>
+                <button onclick="nafSettingsAddZone()" class="mt-3 px-3 py-1.5 text-xs rounded-lg bg-green-500/10 text-green-500 hover:bg-green-500/20 transition-colors"><i class="fas fa-plus mr-1"></i> New Zone</button>
+            </div>
+
+            <!-- Tab: Types -->
+            <div id="settingsPanelTypes" class="lynx-card" style="display:none">
+                <h3 class="text-sm font-semibold lynx-text-primary mb-3">Station Types Hidden on the Map</h3>
+                <p class="text-xs text-gray-400 mb-3">Stations of these types are hidden on the map. Separate types with commas.</p>
+                <input type="text" id="nafSettingsHiddenTypes" class="w-full px-3 py-2 text-sm rounded-lg bg-lynx-subtle dark:bg-[#1A1A1A] border border-lynx-divider dark:border-gray-700 text-gray-700 dark:text-gray-300" placeholder="Testes, Roubo">
+            </div>
+
+            <!-- Tab: Centros de Custo -->
+            <div id="settingsPanelCc" class="lynx-card" style="display:none">
+                <div class="flex items-center justify-between p-4 border-b border-lynx-divider dark:border-gray-800">
+                    <div class="flex items-center gap-3">
+                        <h3 class="text-sm font-semibold lynx-text-primary">Cost Centers</h3>
+                        <span class="text-[0.65rem] text-gray-400" id="nafSettingsCcCount">0 entradas</span>
+                    </div>
+                    <div class="flex gap-2">
+                        <input type="text" id="nafSettingsCcSearch" oninput="nafSettingsFilterCc()" placeholder="Filtrar CC..." class="px-3 py-1.5 text-xs rounded-lg bg-lynx-subtle dark:bg-[#1A1A1A] border border-lynx-divider dark:border-gray-700 text-gray-700 dark:text-gray-300 w-44">
+                        <button onclick="nafSettingsAddCc()" class="px-3 py-1.5 text-xs rounded-lg bg-green-500/10 text-green-500 hover:bg-green-500/20 transition-colors"><i class="fas fa-plus mr-1"></i> New</button>
+                    </div>
+                </div>
+                <div class="overflow-auto" style="max-height:55vh">
+                    <table class="w-full text-sm">
+                        <thead class="sticky top-0 bg-lynx-subtle dark:bg-[#0A0A0A] text-[0.65rem] text-gray-400 uppercase tracking-wider">
+                            <tr>
+                                <th class="text-left px-3 py-2">Code</th>
+                                <th class="text-left px-3 py-2">Name</th>
+                                <th class="text-center px-3 py-2 w-12"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="nafSettingsCcBody" class="text-xs"></tbody>
+                    </table>
+                </div>
+            </div>
+            <!-- Tab: Excluir Duplicados -->
+            <div id="settingsPanelDupExcl" class="lynx-card" style="display:none">
+                <div class="flex items-center justify-between p-4 border-b border-lynx-divider dark:border-gray-800">
+                    <div class="flex items-center gap-3">
+                        <h3 class="text-sm font-semibold lynx-text-primary"><i class="fas fa-user-slash mr-1 text-orange-500"></i> Customers Excluded from Duplicate Detection</h3>
+                        <span class="text-[0.65rem] text-gray-400" id="nafSettingsDupExclCount">0 entradas</span>
+                    </div>
+                    <div class="flex gap-2">
+                        <input type="text" id="nafSettingsDupExclSearch" oninput="nafSettingsFilterDupExcl()" placeholder="Filtrar..." class="px-3 py-1.5 text-xs rounded-lg bg-lynx-subtle dark:bg-[#1A1A1A] border border-lynx-divider dark:border-gray-700 text-gray-700 dark:text-gray-300 w-44">
+                        <button onclick="nafSettingsAddDupExcl()" class="px-3 py-1.5 text-xs rounded-lg bg-green-500/10 text-green-500 hover:bg-green-500/20 transition-colors"><i class="fas fa-plus mr-1"></i> New</button>
+                    </div>
+                </div>
+                <div class="px-4 py-2 text-xs text-gray-400 border-b border-gray-50 dark:border-gray-800">
+                    <i class="fas fa-info-circle mr-1"></i> Exclude corporate customers or specific names and email addresses from duplicate detection. Use a name, an email address or both.
+                </div>
+                <div class="overflow-auto" style="max-height:55vh">
+                    <table class="w-full text-sm">
+                        <thead class="sticky top-0 bg-lynx-subtle dark:bg-[#0A0A0A] text-[0.65rem] text-gray-400 uppercase tracking-wider">
+                            <tr>
+                                <th class="text-left px-3 py-2">Name</th>
+                                <th class="text-left px-3 py-2">Email</th>
+                                <th class="text-left px-3 py-2">Note</th>
+                                <th class="text-center px-3 py-2 w-12"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="nafSettingsDupExclBody" class="text-xs"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Tab: Regras Bloqueio -->
+            <div id="settingsPanelBloqueio" class="lynx-card" style="display:none">
+                <div class="flex items-center justify-between p-4 border-b border-lynx-divider dark:border-gray-800">
+                    <div class="flex items-center gap-3">
+                        <h3 class="text-sm font-semibold lynx-text-primary"><i class="fas fa-lock mr-1 text-red-500"></i> Vehicle Hold Rules</h3>
+                        <span class="text-[0.65rem] text-gray-400" id="nafSettingsBloqueioCount">0 regras</span>
+                    </div>
+                    <div class="flex gap-2">
+                        <input type="text" id="nafSettingsBloqueioSearch" oninput="nafSettingsFilterBloqueio()" placeholder="Filtrar regras..." class="px-3 py-1.5 text-xs rounded-lg bg-lynx-subtle dark:bg-[#1A1A1A] border border-lynx-divider dark:border-gray-700 text-gray-700 dark:text-gray-300 w-44">
+                        <button onclick="nafSettingsAddBloqueio()" class="px-3 py-1.5 text-xs rounded-lg bg-green-500/10 text-green-500 hover:bg-green-500/20 transition-colors"><i class="fas fa-plus mr-1"></i> New Rule</button>
+                    </div>
+                </div>
+                <div class="px-4 py-2 text-xs text-gray-400 border-b border-gray-50 dark:border-gray-800">
+                    <i class="fas fa-info-circle mr-1"></i> Codes identify holds in the Alert field (e.g. <span class="font-mono text-primary-500">TRANS 16/03</span>). Authorized roles specify who can create each hold type.
+                </div>
+                <div class="overflow-auto" style="max-height:55vh">
+                    <table class="w-full text-sm">
+                        <thead class="sticky top-0 bg-lynx-subtle dark:bg-[#0A0A0A] text-[0.65rem] text-gray-400 uppercase tracking-wider">
+                            <tr>
+                                <th class="text-left px-3 py-2">Code</th>
+                                <th class="text-left px-3 py-2">Hold Reason</th>
+                                <th class="text-left px-3 py-2">Authorized Roles</th>
+                                <th class="text-center px-3 py-2 w-12"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="nafSettingsBloqueioBody" class="text-xs"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Tab: Pools Planning -->
+            <div id="settingsPanelPools" class="lynx-card" style="display:none">
+                <div class="flex items-center justify-between p-4 border-b border-lynx-divider dark:border-gray-800">
+                    <div class="flex items-center gap-3">
+                        <h3 class="text-sm font-semibold lynx-text-primary"><i class="fas fa-layer-group mr-1 text-primary-500"></i> Fleet Planning Pools</h3>
+                        <span class="text-[0.65rem] text-gray-400" id="nafSettingsPoolsCount">0 pools</span>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="nafSettingsAddPool()" class="px-3 py-1.5 text-xs rounded-lg bg-green-500/10 text-green-500 hover:bg-green-500/20 transition-colors"><i class="fas fa-plus mr-1"></i> New Pool</button>
+                    </div>
+                </div>
+                <div class="px-4 py-2 text-xs text-gray-400 border-b border-gray-50 dark:border-gray-800">
+                    <i class="fas fa-info-circle mr-1"></i> Group stations into pools for side-by-side comparisons in Fleet Planning. Example: Pool Porto combines Porto Airport, Porto Downtown and Shuttle.
+                </div>
+                <div id="nafSettingsPoolsBody" class="p-4 space-y-3"></div>
+            </div>
+
+            <!-- Tab: ACRISS Categories -->
+            <div id="settingsPanelCategories" class="lynx-card" style="display:none">
+                <div class="flex items-center justify-between p-4 border-b border-lynx-divider dark:border-gray-800">
+                    <div class="flex items-center gap-3">
+                        <h3 class="text-sm font-semibold lynx-text-primary"><i class="fas fa-car mr-1 text-primary-500"></i> ACRISS Group Categories</h3>
+                        <span class="text-[0.65rem] text-gray-400" id="nafSettingsCatCount">0 categorias</span>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="nafSettingsAddCategory()" class="px-3 py-1.5 text-xs rounded-lg bg-green-500/10 text-green-500 hover:bg-green-500/20 transition-colors"><i class="fas fa-plus mr-1"></i> New Category</button>
+                    </div>
+                </div>
+                <div class="px-4 py-2 text-xs text-gray-400 border-b border-gray-50 dark:border-gray-800">
+                    <i class="fas fa-info-circle mr-1"></i> Combine ACRISS codes into categories for planning filters. Example: Manual = MBMR, EDMR, CDMR.
+                </div>
+                <div id="nafSettingsCatBody" class="p-4 space-y-3"></div>
+                <div class="p-4 border-t border-lynx-divider dark:border-gray-800">
+                    <h4 class="text-xs font-semibold lynx-text-primary mb-2"><i class="fas fa-exchange-alt mr-1 text-orange-400"></i> ACRISS Aliases (discontinued groups → replacements)</h4>
+                    <div class="px-2 py-1 text-[0.65rem] text-gray-400 mb-2">Map discontinued ACRISS groups to their replacements. Example: IDAR → JDAR.</div>
+                    <div id="nafSettingsAliasBody" class="space-y-1"></div>
+                    <button onclick="nafSettingsAddAlias()" class="mt-2 px-3 py-1 text-xs rounded-lg bg-orange-500/10 text-orange-500 hover:bg-orange-500/20 transition-colors"><i class="fas fa-plus mr-1"></i> New Alias</button>
+                </div>
+            </div>
+
+            <!-- Tab: Regions -->
+            <div id="settingsPanelRegions" class="lynx-card" style="display:none">
+                <div class="flex items-center justify-between p-4 border-b border-lynx-divider dark:border-gray-800">
+                    <div class="flex items-center gap-3">
+                        <h3 class="text-sm font-semibold lynx-text-primary"><i class="fas fa-globe-europe mr-1 text-primary-500"></i> Fleet Planning Regions</h3>
+                        <span class="text-[0.65rem] text-gray-400" id="nafSettingsRegionCount">0 regions</span>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="nafSettingsAddRegion()" class="px-3 py-1.5 text-xs rounded-lg bg-green-500/10 text-green-500 hover:bg-green-500/20 transition-colors"><i class="fas fa-plus mr-1"></i> New Region</button>
+                    </div>
+                </div>
+                <div class="px-4 py-2 text-xs text-gray-400 border-b border-gray-50 dark:border-gray-800">
+                    <i class="fas fa-info-circle mr-1"></i> Combine pools into regions for an aggregated planning view.
+                </div>
+                <div id="nafSettingsRegionBody" class="p-4 space-y-3"></div>
+            </div>
+
+            <!-- Tab: Brands (Marca/Modelo abbreviation expansion) -->
+            <div id="settingsPanelBrands" class="lynx-card" style="display:none">
+                <div class="flex items-center justify-between p-4 border-b border-lynx-divider dark:border-gray-800">
+                    <div class="flex items-center gap-3">
+                        <h3 class="text-sm font-semibold lynx-text-primary"><i class="fas fa-car-side mr-1 text-primary-500"></i> Manufacturers — Abreviaturas</h3>
+                        <span class="text-[0.65rem] text-gray-400" id="renaBrandsCount">0 marcas</span>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="renaBrandsAdd()" class="px-3 py-1.5 text-xs rounded-lg bg-green-500/10 text-green-500 hover:bg-green-500/20 transition-colors"><i class="fas fa-plus mr-1"></i> New Manufacturer</button>
+                        <button onclick="renaBrandsSave()" class="px-3 py-1.5 text-xs rounded-lg bg-primary-500/10 text-primary-500 hover:bg-primary-500/20 transition-colors"><i class="fas fa-save mr-1"></i> Save Manufacturers</button>
+                    </div>
+                </div>
+                <div class="px-4 py-2 text-xs text-gray-400 border-b border-gray-50 dark:border-gray-800">
+                    <i class="fas fa-info-circle mr-1"></i> Expand manufacturer codes such as VW and MB into display names such as Volkswagen and Mercedes-Benz. Unmapped names are capitalized.
+                </div>
+                <div id="renaBrandsStatus" class="px-4 pt-2 text-xs hidden"></div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-xs">
+                        <thead>
+                            <tr class="text-left text-gray-400 border-b border-lynx-divider dark:border-gray-800">
+                                <th class="px-4 py-2 font-medium">Source code</th>
+                                <th class="px-4 py-2 font-medium">Display name</th>
+                                <th class="px-4 py-2 font-medium text-center">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="renaBrandsBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Tab: Free Upgrades (Planning Config) -->
+            <div id="settingsPanelUpgrades" class="lynx-card" style="display:none">
+                <div class="flex items-center justify-between p-4 border-b border-lynx-divider dark:border-gray-800">
+                    <div class="flex items-center gap-3">
+                        <h3 class="text-sm font-semibold lynx-text-primary"><i class="fas fa-arrow-up mr-1 text-green-500"></i> Free Upgrade Matrix</h3>
+                        <span class="text-[0.65rem] text-gray-400" id="nafSettingsUpgradeCount">0 groups</span>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="nafSettingsAddUpgrade()" class="px-3 py-1.5 text-xs rounded-lg bg-green-500/10 text-green-500 hover:bg-green-500/20 transition-colors"><i class="fas fa-plus mr-1"></i> New Group</button>
+                        <button onclick="nafSettingsSavePlanningConfig()" class="px-3 py-1.5 text-xs rounded-lg bg-primary-500/10 text-primary-500 hover:bg-primary-500/20 transition-colors"><i class="fas fa-save mr-1"></i> Save Planning</button>
+                    </div>
+                </div>
+                <div class="px-4 py-2 text-xs text-gray-400 border-b border-gray-50 dark:border-gray-800">
+                    <i class="fas fa-info-circle mr-1"></i> Define free upgrades by ACRISS group: <span class="text-green-400 font-semibold">Preferred</span> (first choice) → <span class="text-yellow-400 font-semibold">Acceptable</span> (2ª) → <span class="text-red-400 font-semibold">Avoid</span> (last resort)
+                </div>
+                <div id="nafSettingsUpgradeBody" class="p-4 space-y-2 overflow-auto" style="max-height:65vh"></div>
+            </div>
+
+            <!-- Tab: Distâncias (Proximity Matrix) -->
+            <div id="settingsPanelDistances" class="lynx-card" style="display:none">
+                <div class="flex items-center justify-between p-4 border-b border-lynx-divider dark:border-gray-800">
+                    <div class="flex items-center gap-3">
+                        <h3 class="text-sm font-semibold lynx-text-primary"><i class="fas fa-route mr-1 text-blue-500"></i> Distance Matrix (km)</h3>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="nafSettingsSavePlanningConfig()" class="px-3 py-1.5 text-xs rounded-lg bg-primary-500/10 text-primary-500 hover:bg-primary-500/20 transition-colors"><i class="fas fa-save mr-1"></i> Save Planning</button>
+                    </div>
+                </div>
+                <div class="px-4 py-2 text-xs text-gray-400 border-b border-gray-50 dark:border-gray-800">
+                    <i class="fas fa-info-circle mr-1"></i> Distances between stations in kilometers, used to prioritize nearby relocations. Edit values directly in the table.
+                </div>
+                <div id="nafSettingsDistancesBody" class="p-4 overflow-auto" style="max-height:65vh"></div>
+            </div>
+
+            <!-- Tab: Grupos Abertos -->
+            <div id="settingsPanelOpenGroups" class="lynx-card" style="display:none">
+                <div class="flex items-center justify-between p-4 border-b border-lynx-divider dark:border-gray-800">
+                    <div class="flex items-center gap-3">
+                        <h3 class="text-sm font-semibold lynx-text-primary"><i class="fas fa-door-open mr-1 text-purple-500"></i> Accepted Groups by Station</h3>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="nafSettingsSavePlanningConfig()" class="px-3 py-1.5 text-xs rounded-lg bg-primary-500/10 text-primary-500 hover:bg-primary-500/20 transition-colors"><i class="fas fa-save mr-1"></i> Save Planning</button>
+                    </div>
+                </div>
+                <div class="px-4 py-2 text-xs text-gray-400 border-b border-gray-50 dark:border-gray-800">
+                    <i class="fas fa-info-circle mr-1"></i> Select the ACRISS groups accepted by each station. An empty list accepts all groups.
+                </div>
+                <div id="nafSettingsOpenGroupsBody" class="p-4 space-y-3 overflow-auto" style="max-height:65vh"></div>
+            </div>
+
+            <!-- Tab: Parâmetros de Planeamento -->
+            <div id="settingsPanelPlanParams" class="lynx-card" style="display:none">
+                <div class="flex items-center justify-between p-4 border-b border-lynx-divider dark:border-gray-800">
+                    <div class="flex items-center gap-3">
+                        <h3 class="text-sm font-semibold lynx-text-primary"><i class="fas fa-sliders-h mr-1 text-orange-500"></i> Planning Parameters</h3>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="nafSettingsSavePlanningConfig()" class="px-3 py-1.5 text-xs rounded-lg bg-primary-500/10 text-primary-500 hover:bg-primary-500/20 transition-colors"><i class="fas fa-save mr-1"></i> Save Planning</button>
+                    </div>
+                </div>
+                <div id="nafSettingsPlanParamsBody" class="p-4 space-y-4 overflow-auto" style="max-height:65vh"></div>
+            </div>
+
+            <!-- Tab: Utilizadores (owner only) -->
+            <div id="settingsPanelUsers" class="lynx-card" style="display:none" data-owner-only>
+                <div class="flex items-center justify-between p-4 border-b border-lynx-divider dark:border-gray-800">
+                    <div class="flex items-center gap-3">
+                        <h3 class="text-sm font-semibold lynx-text-primary"><i class="fas fa-shield-halved mr-1 text-yellow-500"></i> Users & Permissions</h3>
+                        <span class="text-[0.65rem] text-yellow-600 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 px-2 py-0.5 rounded-full">Owner only</span>
+                    </div>
+                    <button onclick="renaSettingsAddUser()" class="px-3 py-1.5 text-xs rounded-lg bg-yellow-500/10 text-yellow-600 hover:bg-yellow-500/20 transition-colors"><i class="fas fa-plus mr-1"></i> Add User</button>
+                </div>
+                <div class="p-4 overflow-auto" style="max-height:65vh">
+                    <!-- Legend -->
+                    <div class="flex items-center gap-4 mb-4 text-xs text-gray-400">
+                        <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-yellow-400 inline-block"></span> Owner — full access and permission management</span>
+                        <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-green-400 inline-block"></span> Moderator — full access to demo data</span>
+                        <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-blue-400 inline-block"></span> User — access to selected pages</span>
+                    </div>
+                    <table class="w-full text-sm">
+                        <thead class="text-[0.65rem] text-gray-400 uppercase tracking-wider border-b border-lynx-divider">
+                            <tr>
+                                <th class="text-left px-3 py-2">Username</th>
+                                <th class="text-left px-3 py-2">Name</th>
+                                <th class="text-left px-3 py-2">Role</th>
+                                <th class="text-left px-3 py-2">Pages (users)</th>
+                                <th class="text-center px-3 py-2">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="renaUsersBody" class="text-xs divide-y divide-lynx-divider dark:divide-gray-800"></tbody>
+                    </table>
+                </div>
+            </div>
+
+        </main>
+
+        <!-- ════════════════ PAGE: Reservations ════════════════ -->
+        <main id="pageReservations" class="flex-1 p-6 space-y-4" style="display:none">
+
+            <!-- Header -->
+            <div class="flex items-center justify-between flex-wrap gap-2">
+                <h2 class="text-lg font-semibold lynx-text-primary flex items-center gap-2">
+                    <i class="fas fa-calendar-alt text-primary-500"></i> Reservations
+                    <span id="resCount" class="ml-1 bg-lynx-subtle dark:bg-gray-800 text-gray-500 text-xs px-2 py-0.5 rounded-full">0</span>
+                    <span id="resFreshnessInfo" class="ml-2 text-[0.65rem] font-normal text-gray-400 flex items-center gap-1"></span>
+                </h2>
+                <div class="flex gap-2">
+                    <button id="resRefreshBtn" onclick="resForceRefresh()" style="display:none" data-lynx-only
+                        class="px-3 py-1.5 text-xs rounded-lg border border-emerald-300 dark:border-emerald-700 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors">
+                        <i class="fas fa-sync-alt mr-1"></i> Refresh Data
+                    </button>
+                    <button onclick="resResetFilters()" class="px-3 py-1.5 text-xs rounded-lg border border-lynx-divider dark:border-gray-700 text-gray-500 hover:text-primary-500 hover:border-primary-500 transition-colors">
+                        <i class="fas fa-undo mr-1"></i> Clear Filters
+                    </button>
+                    <button id="resExportCsvBtn" onclick="resExportCSV()" title="Export all accepted and checked-out reservations matching the current filters, across all pages" class="px-3 py-1.5 text-xs rounded-lg border border-lynx-divider dark:border-gray-700 text-gray-500 hover:text-primary-500 hover:border-primary-500 transition-colors">
+                        <i class="fas fa-file-csv mr-1"></i> Export CSV
+                    </button>
+                    <button id="resExportExcelBtn" onclick="resExportExcel()" title="Export all accepted and checked-out reservations matching the current filters, across all pages" class="px-3 py-1.5 text-xs rounded-lg border border-lynx-divider dark:border-gray-700 text-gray-500 hover:text-primary-500 hover:border-primary-500 transition-colors">
+                        <i class="fas fa-file-excel mr-1"></i> Export Excel
+                    </button>
+                </div>
+            </div>
+
+            <!-- Filter bar -->
+            <div class="lynx-card">
+                <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+                    <!-- Search -->
+                    <div class="col-span-2 md:col-span-1">
+                        <label class="block text-[0.65rem] font-medium text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wider" for="resFilterSearch">Search</label>
+                        <div class="relative">
+                            <i class="fas fa-search absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 text-[0.65rem]"></i>
+                            <input id="resFilterSearch" type="text" placeholder="Nº, nome, email, carta..."
+                                class="w-full pl-8 pr-3 py-2 text-xs rounded-lg bg-lynx-subtle dark:bg-[#111] border border-lynx-divider dark:border-gray-700 lynx-text-primary focus:border-primary-500 transition-colors">
+                        </div>
+                    </div>
+                    <!-- Pick station -->
+                    <div>
+                        <label class="block text-[0.65rem] font-medium text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wider" for="resFilterPickStation">Pickup Station</label>
+                        <select id="resFilterPickStation" class="w-full px-3 py-2 text-xs rounded-lg bg-lynx-subtle dark:bg-[#111] border border-lynx-divider dark:border-gray-700 lynx-text-primary focus:border-primary-500 transition-colors">
+                            <option value="">All</option>
+                        </select>
+                    </div>
+                    <!-- ZGROUP (multi-select) -->
+                    <div class="relative">
+                        <label class="block text-[0.65rem] font-medium text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wider" for="resFilterZgroupBtn">Group</label>
+                        <button type="button" id="resFilterZgroupBtn" onclick="window.resToggleZgroupPanel()"
+                            class="w-full px-3 py-2 text-xs rounded-lg bg-lynx-subtle dark:bg-[#111] border border-lynx-divider dark:border-gray-700 lynx-text-primary focus:border-primary-500 transition-colors text-left flex items-center justify-between">
+                            <span id="resFilterZgroupLabel" class="truncate">All</span>
+                            <i class="fas fa-chevron-down text-[0.6rem] text-gray-400 flex-shrink-0 ml-1"></i>
+                        </button>
+                        <div id="resFilterZgroupPanel" class="hidden absolute z-30 mt-1 w-56 max-h-72 overflow-y-auto bg-white dark:bg-[#1a1a1a] border border-lynx-divider dark:border-gray-700 rounded-lg shadow-lg p-2">
+                            <label class="flex items-center gap-2 px-2 py-1 text-xs cursor-pointer hover:bg-lynx-subtle dark:hover:bg-gray-800 rounded font-semibold border-b border-lynx-divider dark:border-gray-700 mb-1 pb-1.5">
+                                <input type="checkbox" id="resFilterZgroupAll" checked onchange="window.resZgroupToggleAll(this.checked)">
+                                All
+                            </label>
+                            <div id="resFilterZgroupOptions"></div>
+                        </div>
+                    </div>
+
+                    <!-- Date from -->
+                    <div>
+                        <label class="block text-[0.65rem] font-medium text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wider" for="resFilterDateFrom">Pick-up From</label>
+                        <input id="resFilterDateFrom" type="date" class="w-full px-3 py-2 text-xs rounded-lg bg-lynx-subtle dark:bg-[#111] border border-lynx-divider dark:border-gray-700 lynx-text-primary focus:border-primary-500 transition-colors">
+                    </div>
+                    <!-- Date to -->
+                    <div>
+                        <label class="block text-[0.65rem] font-medium text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wider" for="resFilterDateTo">Pickup Until</label>
+                        <input id="resFilterDateTo" type="date" class="w-full px-3 py-2 text-xs rounded-lg bg-lynx-subtle dark:bg-[#111] border border-lynx-divider dark:border-gray-700 lynx-text-primary focus:border-primary-500 transition-colors">
+                    </div>
+                </div>
+                <!-- OW zone filter row -->
+                <div id="resOwFilterRow" class="mt-3 flex items-end gap-3 flex-wrap">
+                    <div class="flex items-center gap-2">
+                        <i class="fas fa-route text-primary-500 text-xs"></i>
+                        <span class="text-[0.65rem] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">OW entre zonas</span>
+                    </div>
+                    <div>
+                        <label class="block text-[0.65rem] font-medium text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wider" for="resFilterOwFrom">Departure</label>
+                        <select id="resFilterOwFrom" onchange="resApplyFilters()" class="w-full px-3 py-2 text-xs rounded-lg bg-lynx-subtle dark:bg-[#111] border border-lynx-divider dark:border-gray-700 lynx-text-primary focus:border-primary-500 transition-colors">
+                            <option value="">Any zone</option>
+                        </select>
+                    </div>
+                    <div class="flex items-center pb-2">
+                        <i class="fas fa-arrow-right text-gray-400 text-xs"></i>
+                    </div>
+                    <div>
+                        <label class="block text-[0.65rem] font-medium text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wider" for="resFilterOwTo">Destination</label>
+                        <select id="resFilterOwTo" onchange="resApplyFilters()" class="w-full px-3 py-2 text-xs rounded-lg bg-lynx-subtle dark:bg-[#111] border border-lynx-divider dark:border-gray-700 lynx-text-primary focus:border-primary-500 transition-colors">
+                            <option value="">Any zone</option>
+                        </select>
+                    </div>
+                    <div class="ml-auto flex items-end pb-0.5">
+                        <button id="resFilterForeignBtn" onclick="resToggleForeign()"
+                            class="flex items-center gap-1.5 px-3 py-2 text-xs rounded-lg border border-lynx-divider dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:text-blue-500 hover:border-blue-400 transition-colors">
+                            <i class="fas fa-globe-europe text-[0.7rem]"></i> International Return
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Table -->
+            <div class="lynx-card overflow-hidden p-0">
+                <div class="overflow-x-auto">
+                    <table id="resTable" class="w-full text-left">
+                        <thead class="bg-lynx-subtle dark:bg-[#111] text-[0.65rem] uppercase tracking-wider text-gray-500">
+                            <tr>
+                                <th data-col="RESERVATION_NO" class="px-3 py-2.5 font-medium whitespace-nowrap">Reservation No. <i class="sort-icon fas fa-sort text-gray-300 ml-1"></i></th>
+                                <th data-col="STATUS" class="px-3 py-2.5 font-medium whitespace-nowrap">Status <i class="sort-icon fas fa-sort text-gray-300 ml-1"></i></th>
+                                <th data-col="ZGROUP" class="px-3 py-2.5 font-medium whitespace-nowrap">Group <i class="sort-icon fas fa-sort text-gray-300 ml-1"></i></th>
+                                <th data-col="ACRISS_CODE" class="px-3 py-2.5 font-medium whitespace-nowrap">ACRISS <i class="sort-icon fas fa-sort text-gray-300 ml-1"></i></th>
+                                <th data-col="DURATION" class="px-3 py-2.5 font-medium whitespace-nowrap">Duration <i class="sort-icon fas fa-sort text-gray-300 ml-1"></i></th>
+                                <th data-col="IS_LONGTERM" class="px-3 py-2.5 font-medium whitespace-nowrap">Long Term <i class="sort-icon fas fa-sort text-gray-300 ml-1"></i></th>
+                                <th data-col="ONE_WAY" class="px-3 py-2.5 font-medium whitespace-nowrap">One Way <i class="sort-icon fas fa-sort text-gray-300 ml-1"></i></th>
+                                <th data-col="IS_PREPAID" class="px-3 py-2.5 font-medium whitespace-nowrap">Prepaid <i class="sort-icon fas fa-sort text-gray-300 ml-1"></i></th>
+                                <th data-col="IS_VIP" class="px-3 py-2.5 font-medium whitespace-nowrap">VIP <i class="sort-icon fas fa-sort text-gray-300 ml-1"></i></th>
+                                <th data-col="LOYALTY_STATUS" class="px-3 py-2.5 font-medium whitespace-nowrap">Loyalty <i class="sort-icon fas fa-sort text-gray-300 ml-1"></i></th>
+                                <th data-col="PICK_DATETIME" class="px-3 py-2.5 font-medium whitespace-nowrap">Pick-up <i class="sort-icon fas fa-sort text-gray-300 ml-1"></i></th>
+                                <th class="px-3 py-2.5 font-medium whitespace-nowrap">Pick ID</th>
+                                <th data-col="PICK_STATION_NAME" class="px-3 py-2.5 font-medium whitespace-nowrap">Pickup Station <i class="sort-icon fas fa-sort text-gray-300 ml-1"></i></th>
+                                <th class="px-3 py-2.5 font-medium whitespace-nowrap">Timezone</th>
+                                <th data-col="RET_DATETIME" class="px-3 py-2.5 font-medium whitespace-nowrap">Return <i class="sort-icon fas fa-sort text-gray-300 ml-1"></i></th>
+                                <th class="px-3 py-2.5 font-medium whitespace-nowrap">Ret ID</th>
+                                <th data-col="RET_STATION_NAME" class="px-3 py-2.5 font-medium whitespace-nowrap">Return Station <i class="sort-icon fas fa-sort text-gray-300 ml-1"></i></th>
+                                <th data-col="VEHICLE_TYPE" class="px-3 py-2.5 font-medium whitespace-nowrap">Vehicle Type <i class="sort-icon fas fa-sort text-gray-300 ml-1"></i></th>
+                                <th data-col="VEHICLE_MAKE" class="px-3 py-2.5 font-medium whitespace-nowrap">Manufacturer <i class="sort-icon fas fa-sort text-gray-300 ml-1"></i></th>
+                                <th data-col="VEHICLE_MODEL" class="px-3 py-2.5 font-medium whitespace-nowrap">Model <i class="sort-icon fas fa-sort text-gray-300 ml-1"></i></th>
+                                <th data-col="LICENCE_PLATE" class="px-3 py-2.5 font-medium whitespace-nowrap">License Plate <i class="sort-icon fas fa-sort text-gray-300 ml-1"></i></th>
+                                <th data-col="IS_DELIVERY" class="px-3 py-2.5 font-medium whitespace-nowrap">Delivery <i class="sort-icon fas fa-sort text-gray-300 ml-1"></i></th>
+                                <th data-col="IS_COLLECTION" class="px-3 py-2.5 font-medium whitespace-nowrap">Collection <i class="sort-icon fas fa-sort text-gray-300 ml-1"></i></th>
+                                <th data-col="GAT_DELIVERY" class="px-3 py-2.5 font-medium whitespace-nowrap">GAT Deliv. <i class="sort-icon fas fa-sort text-gray-300 ml-1"></i></th>
+                                <th data-col="IS_SUBSCRIPTION" class="px-3 py-2.5 font-medium whitespace-nowrap">Subscription <i class="sort-icon fas fa-sort text-gray-300 ml-1"></i></th>
+                                <th data-col="IS_VEHICLE_EXCHANGE" class="px-3 py-2.5 font-medium whitespace-nowrap">Vehicle Exchange <i class="sort-icon fas fa-sort text-gray-300 ml-1"></i></th>
+                                <th data-col="CHECKOUT_AGENT" class="px-3 py-2.5 font-medium whitespace-nowrap">Checkout Agent <i class="sort-icon fas fa-sort text-gray-300 ml-1"></i></th>
+                                <th data-col="CAN_CHECKOUT" class="px-3 py-2.5 font-medium whitespace-nowrap">Can CO <i class="sort-icon fas fa-sort text-gray-300 ml-1"></i></th>
+                            </tr>
+                        </thead>
+                        <tbody id="resTableBody" class="lynx-text-primary dark:text-gray-300">
+                            <tr><td colspan="28" class="text-center py-12 text-gray-400">
+                                <i class="fas fa-calendar-alt text-3xl mb-2"></i><br>Open the Reservations page to load data
+                            </td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Pagination -->
+            <div id="resPagination" class="flex items-center justify-between text-sm"></div>
+
+        </main>
+
+        <!-- ══════ DUPLICADOS PAGE ══════ -->
+        <main id="pageDuplicados" class="flex-1 p-6 space-y-4" style="display:none">
+            <div class="flex items-center justify-between flex-wrap gap-2">
+                <h2 class="text-lg font-semibold lynx-text-primary flex items-center gap-2">
+                    <i class="fas fa-clone text-yellow-500"></i> Duplicate Customers
+                    <span id="dupCount" class="ml-1 bg-yellow-100 dark:bg-yellow-900/20 text-yellow-600 dark:text-yellow-400 text-xs px-2 py-0.5 rounded-full">0</span>
+                    <span class="text-xs font-normal text-gray-400">customers &middot; <span id="dupResCount">0</span> reservations</span>
+                </h2>
+                <div id="dupActions" class="flex items-center gap-2"></div>
+            </div>
+            <!-- Tabs -->
+            <div class="flex items-center gap-1 border-b border-lynx-divider dark:border-gray-700">
+                <button id="dupTabNew" onclick="dupSwitchTab('new')" class="px-4 py-2 text-xs font-medium border-b-2 border-primary-500 text-primary-500 -mb-px">
+                    <i class="fas fa-exclamation-circle mr-1"></i>New <span id="dupNewCount" class="ml-1 bg-red-500/15 text-red-500 text-[0.6rem] px-1.5 py-0.5 rounded-full">0</span>
+                </button>
+                <button id="dupTabBrokers" onclick="dupSwitchTab('brokers')" class="px-4 py-2 text-xs font-medium border-b-2 border-transparent text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 -mb-px">
+                    <i class="fas fa-globe mr-1"></i>Brokers <span id="dupBrokersCount" class="ml-1 bg-amber-500/15 text-amber-500 text-[0.6rem] px-1.5 py-0.5 rounded-full">0</span>
+                </button>
+                <button id="dupTabSent" onclick="dupSwitchTab('sent')" class="px-4 py-2 text-xs font-medium border-b-2 border-transparent text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 -mb-px">
+                    <i class="fas fa-paper-plane mr-1"></i>Reported <span id="dupSentCount" class="ml-1 bg-gray-500/15 text-gray-400 text-[0.6rem] px-1.5 py-0.5 rounded-full">0</span>
+                </button>
+            </div>
+            <div id="dupContent"></div>
+        </main>
+
+        <!-- Fleet Planning -->
+        <main id="pagePlanning" class="flex-1 p-6 space-y-4" style="display:none">
+            <div class="flex items-center justify-between flex-wrap gap-3">
+                <h2 class="text-lg font-semibold lynx-text-primary flex items-center gap-2">
+                    <i class="fas fa-calendar-check text-primary-500"></i> Fleet Planning
+                </h2>
+                <div class="flex items-center gap-2 flex-wrap">
+                    <div id="fpGroupDropdown" class="relative"></div>
+                    <select id="fpDaysFilter" onchange="fpChangeDays()" class="text-xs px-3 py-1.5 rounded-lg bg-lynx-subtle dark:bg-[#1A1A1A] text-gray-700 dark:text-gray-300 border border-lynx-divider dark:border-gray-700 focus:ring-2 focus:ring-primary-500 outline-none">
+                        <option value="7">7 days</option>
+                        <option value="14">14 days</option>
+                        <option value="30" selected>30 days</option>
+                        <option value="60">60 days</option>
+                        <option value="90">90 days</option>
+                        <option value="180">180 days</option>
+                        <option value="365">365 days</option>
+                    </select>
+                    <button onclick="fpExportCSV()" class="text-xs px-3 py-1.5 rounded-lg bg-lynx-subtle dark:bg-[#1A1A1A] text-gray-500 hover:text-primary-500 border border-lynx-divider dark:border-gray-700" title="Export CSV" aria-label="Export CSV">
+                        <i class="fas fa-download"></i>
+                    </button>
+                    <button onclick="fpRefreshInfleet()" id="fpInfleetBtn" data-lynx-only class="text-xs px-3 py-1.5 rounded-lg bg-emerald-600/20 text-emerald-400 border border-emerald-600/30 hover:bg-emerald-600/30 transition-colors" title="Refresh the fleet-addition snapshot">
+                        <i class="fas fa-truck-loading"></i> Infleet
+                    </button>
+                    <span id="fpInfo"></span>
+                </div>
+            </div>
+            <!-- ACRISS Group Filter Bar (inline, no overlap) -->
+            <div id="fpGroupFilterBar" class="hidden lynx-card px-4 py-3 text-xs"></div>
+            <!-- Pool selection -->
+            <div class="flex items-center gap-2 flex-wrap lynx-card px-4 py-2.5">
+                <div id="fpViewToggle" class="hidden mr-2"></div>
+                <div id="fpPoolDropdown" class="relative"></div>
+                <div id="fpOccupancyBadge" class="hidden"></div>
+            </div>
+            <div id="fpContent"></div>
+
+            <!-- Vehicle Detail Drill-down Modal -->
+            <div id="fpVehicleModal" class="fixed inset-0 z-50 hidden" onclick="if(event.target===this)fpCloseVehicleModal()">
+                <div class="absolute inset-0 bg-black/50 backdrop-blur-sm"></div>
+                <div class="relative mx-auto mt-12 mb-8 w-full max-w-6xl lynx-surface rounded-xl shadow-2xl border border-lynx-divider dark:border-gray-800 flex flex-col" style="max-height:85vh">
+                    <div class="flex items-center justify-between px-6 py-4 border-b border-lynx-divider dark:border-gray-700">
+                        <h3 class="text-sm font-semibold lynx-text-primary" id="fpVehicleModalTitle">Available Vehicles</h3>
+                        <button onclick="fpCloseVehicleModal()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors" aria-label="Close"><i class="fas fa-times"></i></button>
+                    </div>
+                    <div class="overflow-auto flex-1 px-6 py-4" id="fpVehicleModalBody"></div>
+                </div>
+            </div>
+        </main>
+
+
+
+        <!-- Island Blocking -->
+        <main id="pageIslandBlocking" class="flex-1 p-6 space-y-4" style="display:none">
+            <div class="flex items-center justify-between flex-wrap gap-3">
+                <h2 class="text-lg font-semibold lynx-text-primary flex items-center gap-2">
+                    <i class="fas fa-lock text-primary-500"></i> Island Transfers
+                </h2>
+                <div class="flex items-center gap-2 flex-wrap">
+                    <button onclick="ibSearch()" class="text-xs px-3 py-1.5 rounded-lg bg-primary-500 text-white font-semibold hover:bg-primary-600 transition-colors">
+                        <i class="fas fa-search"></i> Search
+                    </button>
+                </div>
+            </div>
+            <div id="ibContent">
+                <div class="text-center text-gray-400 py-16">
+                    <i class="fas fa-lock text-4xl mb-4 opacity-30"></i>
+                    <p>Find available vehicles eligible for island transfers.</p>
+                    <p class="text-[0.65rem] mt-2">Filter by zone, ACRISS group, ownership type (FP/BB) and minimum remaining contract days.</p>
+                </div>
+            </div>
+        </main>
+
+
+        <main id="pageCapacityControl" class="flex-1 p-6 space-y-4" style="display:none">
+            <div class="flex items-center justify-between flex-wrap gap-3">
+                <h2 class="text-lg font-semibold lynx-text-primary flex items-center gap-2">
+                    <i class="fas fa-layer-group text-primary-500"></i> Capacity &amp; Slots
+                </h2>
+                <div class="flex items-center gap-2 flex-wrap">
+                    <select id="ccDaysSelect" onchange="ccChangeDays(this.value)" class="text-xs border border-lynx-divider rounded-lg px-2.5 py-1.5 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-primary-400">
+                        <option value="7">7 days</option>
+                        <option value="14" selected>14 days</option>
+                        <option value="21">21 days</option>
+                        <option value="30">30 days</option>
+                        <option value="60">60 days</option>
+                    </select>
+                    <button onclick="capacityControlRefresh()" class="text-xs px-3 py-1.5 rounded-lg bg-primary-500 text-white font-semibold hover:bg-primary-600 transition-colors">
+                        <i class="fas fa-sync-alt mr-1"></i> Refresh
+                    </button>
+                    <button onclick="ccToggleRadar()" id="ccRadarBtn" class="text-xs px-3 py-1.5 rounded-lg border border-lynx-divider text-gray-500 hover:text-primary-500 dark:text-gray-400 dark:hover:text-primary-400 transition-colors" title="Group Radar — ACRISS health, coverage and reservation growth">
+                        <i class="fas fa-satellite-dish mr-1"></i> Radar
+                    </button>
+                    <button onclick="ccOpenConfig()" class="text-xs px-3 py-1.5 rounded-lg border border-lynx-divider text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                        <i class="fas fa-cog mr-1"></i> Configure
+                    </button>
+                </div>
+            </div>
+            <div id="ccRadarPanel" class="hidden"></div>
+            <div id="ccContent">
+                <div class="text-center text-gray-400 py-16">
+                    <i class="fas fa-layer-group text-4xl mb-4 opacity-30"></i>
+                    <p>Monitor daily capacity and time-slot limits by station.</p>
+                    <p class="text-[0.65rem] mt-2">Review projected demand and identify days approaching capacity.</p>
+                </div>
+            </div>
+        </main>
+
+
+
+
+
+
+
+        <main id="pageRotation" class="flex-1 p-6 space-y-4" style="display:none">
+            <!-- Sem acesso à pasta partilhada -->
+            <div id="rotNoAccessBanner" class="hidden bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3">
+                <i class="fas fa-lock text-red-400 mt-0.5 flex-shrink-0"></i>
+                <div>
+                    <div class="font-semibold text-red-700 text-sm">Shared folder unavailable</div>
+                    <div id="rotNoAccessMsg" class="text-xs text-red-600 mt-1 whitespace-pre-line"></div>
+                </div>
+            </div>
+            <!-- Header -->
+            <div class="flex items-center justify-between flex-wrap gap-3">
+                <div>
+                    <h2 class="text-lg font-semibold lynx-text-primary flex items-center gap-2">
+                        <i class="fas fa-truck-loading text-primary-500"></i> Fleet Rotation
+                    </h2>
+                    <p class="text-xs text-gray-400 mt-0.5">Create and manage vehicle transport loads</p>
+                </div>
+                <div class="flex items-center gap-2 flex-wrap text-xs">
+                    <button onclick="rotExportarCSV()" class="px-3 py-1.5 rounded-lg bg-emerald-500 text-white font-semibold hover:bg-emerald-600 transition-colors" title="Export CSV">
+                        <i class="fas fa-file-csv"></i> Export CSV
+                    </button>
+                </div>
+            </div>
+
+            <!-- KPI cards -->
+            <div class="grid grid-cols-2 md:grid-cols-6 gap-3">
+                <button onclick="rotFiltrarEstado('')" class="rot-kpi text-left bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-lynx-divider dark:border-gray-700 p-3 hover:shadow-md transition-all" data-estado="">
+                    <div class="text-[0.6rem] uppercase tracking-wider text-gray-400 font-semibold">Total</div>
+                    <div class="text-2xl font-bold lynx-text-primary mt-1" id="rotCountTotal">0</div>
+                    <div class="text-[0.6rem] text-gray-400 mt-0.5">registered loads</div>
+                </button>
+                <button onclick="rotFiltrarEstado('Pending')" class="rot-kpi text-left bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-lynx-divider dark:border-gray-700 p-3 hover:shadow-md transition-all" data-estado="Pending">
+                    <div class="text-[0.6rem] uppercase tracking-wider text-yellow-500 font-semibold flex items-center gap-1"><i class="fas fa-clock"></i> Pending</div>
+                    <div class="text-2xl font-bold text-yellow-500 mt-1" id="rotCount_Pending">0</div>
+                </button>
+                <button onclick="rotFiltrarEstado('Requested')" class="rot-kpi text-left bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-lynx-divider dark:border-gray-700 p-3 hover:shadow-md transition-all" data-estado="Requested">
+                    <div class="text-[0.6rem] uppercase tracking-wider text-blue-500 font-semibold flex items-center gap-1"><i class="fas fa-paper-plane"></i> Requested</div>
+                    <div class="text-2xl font-bold text-blue-500 mt-1" id="rotCount_Requested">0</div>
+                </button>
+                <button onclick="rotFiltrarEstado('Confirmed')" class="rot-kpi text-left bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-lynx-divider dark:border-gray-700 p-3 hover:shadow-md transition-all" data-estado="Confirmed">
+                    <div class="text-[0.6rem] uppercase tracking-wider text-purple-500 font-semibold flex items-center gap-1"><i class="fas fa-handshake"></i> Confirmed</div>
+                    <div class="text-2xl font-bold text-purple-500 mt-1" id="rotCount_Confirmed">0</div>
+                </button>
+                <button onclick="rotFiltrarEstado('In Transit')" class="rot-kpi text-left bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-lynx-divider dark:border-gray-700 p-3 hover:shadow-md transition-all" data-estado="In Transit">
+                    <div class="text-[0.6rem] uppercase tracking-wider text-orange-500 font-semibold flex items-center gap-1"><i class="fas fa-truck-moving"></i> In Transit</div>
+                    <div class="text-2xl font-bold text-orange-500 mt-1" id="rotCount_In_Transit">0</div>
+                </button>
+                <button onclick="rotFiltrarEstado('Completed')" class="rot-kpi text-left bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-lynx-divider dark:border-gray-700 p-3 hover:shadow-md transition-all" data-estado="Completed">
+                    <div class="text-[0.6rem] uppercase tracking-wider text-green-500 font-semibold flex items-center gap-1"><i class="fas fa-check-double"></i> Completed</div>
+                    <div class="text-2xl font-bold text-green-500 mt-1" id="rotCount_Completed">0</div>
+                </button>
+            </div>
+
+            <!-- Tabs -->
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-lynx-divider dark:border-gray-700 overflow-hidden">
+                <div class="flex items-center border-b border-lynx-divider dark:border-gray-700 px-3 pt-2 gap-1">
+                    <button id="rotTabCriar" onclick="rotSwitchTab('criar')" class="px-4 py-2.5 text-sm font-medium border-b-2 border-primary-500 text-primary-500 transition-colors">
+                        <i class="fas fa-plus-circle mr-1"></i> Create Load
+                    </button>
+                    <button id="rotTabVer" onclick="rotSwitchTab('ver')" class="px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-gray-400 hover:text-primary-500 transition-colors">
+                        <i class="fas fa-list mr-1"></i> View Loads <span id="rotCount_Cancelled" class="hidden"></span>
+                    </button>
+                    <button id="rotTabStats" onclick="rotSwitchTab('stats')" class="px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-gray-400 hover:text-primary-500 transition-colors">
+                        <i class="fas fa-chart-bar mr-1"></i> Statistics
+                    </button>
+                </div>
+
+                <!-- Panel: Criar Carga -->
+                <div id="rotPanelCriar" class="p-5 space-y-4">
+                    <!-- Rotas recentes -->
+                    <div id="rotRotasRecentes" class="hidden">
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <span class="text-[0.6rem] uppercase tracking-wider text-gray-400 font-semibold whitespace-nowrap"><i class="fas fa-history mr-1"></i>Recent routes:</span>
+                            <div id="rotRotasChips" class="flex flex-wrap gap-1"></div>
+                        </div>
+                    </div>
+                    <!-- Section: Rota & Datas -->
+                    <div class="border border-lynx-divider dark:border-gray-700 rounded-lg p-4 space-y-3">
+                        <h3 class="text-xs font-semibold uppercase tracking-wider text-gray-500 flex items-center gap-2">
+                            <span class="w-6 h-6 rounded-full bg-primary-500/10 text-primary-500 flex items-center justify-center text-[0.65rem] font-bold">1</span>
+                            Route & Dates
+                        </h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="space-y-2">
+                                <div>
+                                    <label class="text-[0.65rem] font-semibold text-gray-500 uppercase" for="rotEstacaoOrigem">
+                                        <i class="fas fa-map-marker-alt text-primary-500"></i> Origin
+                                    </label>
+                                    <select id="rotEstacaoOrigem" onchange="rotToggleOutro('origem');rotUpdateViaturas()" class="w-full mt-1 text-xs bg-lynx-subtle dark:bg-gray-700 border border-lynx-divider dark:border-gray-600 rounded-lg px-2 py-2"></select>
+                                </div>
+                                <div id="rotOutroOrigem" class="hidden">
+                                    <input type="text" placeholder="Pickup address…" class="w-full text-xs bg-lynx-subtle dark:bg-gray-700 border border-lynx-divider dark:border-gray-600 rounded-lg px-2 py-2" />
+                                </div>
+                                <div>
+                                    <label class="text-[0.65rem] font-semibold text-gray-500 uppercase" for="rotDataLev">
+                                        <i class="fas fa-calendar text-primary-500"></i> Pickup Date
+                                    </label>
+                                    <input id="rotDataLev" type="date" onchange="rotUpdateViaturas()" class="w-full mt-1 text-xs bg-lynx-subtle dark:bg-gray-700 border border-lynx-divider dark:border-gray-600 rounded-lg px-2 py-2" />
+                                </div>
+                            </div>
+                            <div class="space-y-2">
+                                <div>
+                                    <label class="text-[0.65rem] font-semibold text-gray-500 uppercase" for="rotEstacaoDestino">
+                                        <i class="fas fa-flag-checkered text-emerald-500"></i> Destination
+                                    </label>
+                                    <select id="rotEstacaoDestino" onchange="rotToggleOutro('destino');rotUpdateViaturas()" class="w-full mt-1 text-xs bg-lynx-subtle dark:bg-gray-700 border border-lynx-divider dark:border-gray-600 rounded-lg px-2 py-2"></select>
+                                </div>
+                                <div id="rotOutroDestino" class="hidden">
+                                    <input type="text" placeholder="Delivery address…" class="w-full text-xs bg-lynx-subtle dark:bg-gray-700 border border-lynx-divider dark:border-gray-600 rounded-lg px-2 py-2" />
+                                </div>
+                                <div>
+                                    <label class="text-[0.65rem] font-semibold text-gray-500 uppercase" for="rotDataDes">
+                                        <i class="fas fa-calendar-check text-emerald-500"></i> Delivery Date
+                                    </label>
+                                    <input id="rotDataDes" type="date" onchange="rotUpdateViaturas()" class="w-full mt-1 text-xs bg-lynx-subtle dark:bg-gray-700 border border-lynx-divider dark:border-gray-600 rounded-lg px-2 py-2" />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Section: Detalhes -->
+                    <div class="border border-lynx-divider dark:border-gray-700 rounded-lg p-4 space-y-3">
+                        <h3 class="text-xs font-semibold uppercase tracking-wider text-gray-500 flex items-center gap-2">
+                            <span class="w-6 h-6 rounded-full bg-primary-500/10 text-primary-500 flex items-center justify-center text-[0.65rem] font-bold">2</span>
+                            Load Details
+                        </h3>
+                        <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+                            <div>
+                                <label class="text-[0.65rem] font-semibold text-gray-500 uppercase" for="rotUrgencia">Urgency (default)</label>
+                                <select id="rotUrgencia" class="w-full mt-1 text-xs bg-lynx-subtle dark:bg-gray-700 border border-lynx-divider dark:border-gray-600 rounded-lg px-2 py-2">
+                                    <option>Normal (48h)</option>
+                                    <option>Urgent (24h)</option>
+                                    <option>Very Urgent (Today)</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="text-[0.65rem] font-semibold text-gray-500 uppercase" for="rotMotivo">Reason (default)</label>
+                                <select id="rotMotivo" class="w-full mt-1 text-xs bg-lynx-subtle dark:bg-gray-700 border border-lynx-divider dark:border-gray-600 rounded-lg px-2 py-2">
+                                    <option>Transfer</option>
+                                    <option>Fleet Rebalancing</option>
+                                    <option>Workshop</option>
+                                    <option>Defleet</option>
+                                    <option>Infleet</option>
+                                    <option>Customer</option>
+                                    <option>Other</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="text-[0.65rem] font-semibold text-gray-500 uppercase" for="rotCentroCusto">Cost Center</label>
+                                <input id="rotCentroCusto" type="text" readonly onclick="rotSelecionarCC()" placeholder="Click to choose…" class="w-full mt-1 text-xs bg-lynx-subtle dark:bg-gray-700 border border-lynx-divider dark:border-gray-600 rounded-lg px-2 py-2 cursor-pointer" />
+                            </div>
+                            <div>
+                                <label class="text-[0.65rem] font-semibold text-gray-500 uppercase" for="rotObservacoes">Notes</label>
+                                <input id="rotObservacoes" type="text" placeholder="Notes..." class="w-full mt-1 text-xs bg-lynx-subtle dark:bg-gray-700 border border-lynx-divider dark:border-gray-600 rounded-lg px-2 py-2" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Section: Viaturas -->
+                    <div class="border border-lynx-divider dark:border-gray-700 rounded-lg p-4 space-y-3">
+                        <div class="flex items-center justify-between flex-wrap gap-2">
+                            <h3 class="text-xs font-semibold uppercase tracking-wider text-gray-500 flex items-center gap-2">
+                                <span class="w-6 h-6 rounded-full bg-primary-500/10 text-primary-500 flex items-center justify-center text-[0.65rem] font-bold">3</span>
+                                Vehicles <span id="rotViaturasCount" class="ml-1 px-2 py-0.5 bg-primary-500 text-white text-[0.65rem] rounded-full">0</span>
+                            </h3>
+                            <div class="flex items-center gap-2">
+                                <input id="rotMatriculaInput" type="text" placeholder="License plate or group (e.g. ZZ-01-DA / IFAR)" title="Enter a license plate, or a group code if the vehicle has not been selected" onkeypress="if(event.key==='Enter')rotAddViatura()" class="text-xs bg-lynx-subtle dark:bg-gray-700 border border-lynx-divider dark:border-gray-600 rounded-lg px-2 py-2 w-56 uppercase font-mono" />
+                                <button onclick="rotAddViatura()" class="text-xs px-3 py-2 rounded-lg bg-primary-500 text-white font-semibold hover:bg-primary-600 transition-colors">
+                                    <i class="fas fa-plus"></i> Add
+                                </button>
+                            </div>
+                        </div>
+                        <div class="overflow-x-auto rounded-lg border border-lynx-divider dark:border-gray-700">
+                            <table class="w-full">
+                                <thead class="text-[0.6rem] uppercase text-gray-500 bg-lynx-subtle dark:bg-gray-900/50">
+                                    <tr>
+                                        <th class="py-2 px-3 text-left">License Plate</th>
+                                        <th class="py-2 px-3 text-left">Description</th>
+                                        <th class="py-2 px-3 text-center">ACRISS</th>
+                                        <th class="py-2 px-3 text-left">Origin</th>
+                                        <th class="py-2 px-3 text-center">Pickup Date</th>
+                                        <th class="py-2 px-3 text-left">Destination</th>
+                                        <th class="py-2 px-3 text-center">Delivery Date</th>
+                                        <th class="py-2 px-3 text-left">Urgency</th>
+                                        <th class="py-2 px-3 text-left">Reason</th>
+                                        <th class="py-2 px-3 text-left">CC</th>
+                                        <th class="py-2 px-3 text-center"></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="rotViaturasBody"></tbody>
+                            </table>
+                        </div>
+                        <div class="flex items-center justify-end gap-2 pt-2">
+                            <button id="rotBtnCriar" onclick="rotCriarCarga()" class="px-5 py-2.5 rounded-lg bg-emerald-500 text-white text-sm font-semibold hover:bg-emerald-600 transition-colors shadow-sm">
+                                <i class="fas fa-truck-loading mr-2"></i> Create Load
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Panel: Ver Cargas -->
+                <div id="rotPanelVer" class="p-5 space-y-4 hidden">
+                    <div class="flex items-center gap-3 flex-wrap">
+                        <div class="relative flex-1 min-w-[240px]">
+                            <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs"></i>
+                            <input id="rotSearchInput" type="text" oninput="rotPesquisar()" placeholder="Search by reference, license plate, carrier or reason…" class="w-full text-xs bg-lynx-subtle dark:bg-gray-700 border border-lynx-divider dark:border-gray-600 rounded-lg pl-9 pr-3 py-2.5" />
+                        </div>
+                        <button onclick="rotFiltrarEstado('Cancelled')" class="text-[0.65rem] px-3 py-2 rounded-lg bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-colors font-medium" title="Cancelled">
+                            <i class="fas fa-times-circle"></i> Cancelled
+                        </button>
+                        <button onclick="rotFiltrarEstado(null);document.getElementById('rotSearchInput').value='';rotPesquisar()" class="text-[0.65rem] px-3 py-2 rounded-lg bg-lynx-subtle dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors font-medium">
+                            <i class="fas fa-filter-circle-xmark"></i> Clear Filters
+                        </button>
+                        <div id="rotRefreshIndicator" class="text-[11px] text-gray-400 flex items-center gap-1 ml-auto select-none" title="Refreshes automatically every 20 seconds"></div>
+                    </div>
+                    <div id="rotEstadoFiltroLabel" class="hidden text-xs text-gray-500 italic"></div>
+                    <div id="rotCargasContainer" class="space-y-3">
+                        <div class="text-center text-gray-400 py-16">
+                            <i class="fas fa-truck-loading text-4xl mb-4 opacity-30"></i>
+                            <p>Loading loads…</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Panel: Estatísticas -->
+                <div id="rotPanelStats" class="p-5 hidden">
+                    <div id="rotStatsContent"></div>
+                </div>
+            </div>
+
+            <!-- Generic modal -->
+            <div id="rotGenericModal" class="hidden fixed inset-0 bg-black/50 z-50 items-center justify-center p-4">
+                <div class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-3xl w-full max-h-[90vh] flex flex-col">
+                    <div class="flex items-center justify-between p-4 border-b border-lynx-divider dark:border-gray-700">
+                        <h3 id="rotModalTitle" class="text-base font-semibold lynx-text-primary">Modal</h3>
+                        <button onclick="rotCloseModal()" class="text-gray-400 hover:text-gray-600" aria-label="Close"><i class="fas fa-times"></i></button>
+                    </div>
+                    <div id="rotModalBody" class="p-4 overflow-y-auto flex-1"></div>
+                </div>
+            </div>
+
+            <!-- Toast container -->
+            <div id="rotToastContainer" class="fixed top-4 right-4 z-[60] space-y-2"></div>
+        </main>
+
+        <!-- ══════════════ PAGE: OW FOREIGN ══════════════ -->
+        <main id="pageOWForeign" class="flex-1 p-6 space-y-4" style="display:none">
+            <div class="flex items-center gap-3 mb-2">
+                <i class="fas fa-globe-europe text-primary-500 text-xl flex-shrink-0"></i>
+                <div class="flex-1">
+                    <h2 class="text-lg font-bold text-gray-800 dark:text-gray-100">International One-Way</h2>
+                    <p class="text-xs text-gray-400 mt-0.5">Reservations returning to foreign stations. Review the sample vehicle authorization workflow.</p>
+                </div>
+            </div>
+            <div id="owfContent"></div>
+            <div id="owfEmailPanel" class="hidden"></div>
+        </main>
+
+        <main id="pageMatchVehicle" class="flex-1 p-6 space-y-4" style="display:none">
+            <div class="ui-match-toolbar">
+                <p>Search for one or more license plates.</p>
+                <button id="matchRefreshBtn" type="button" onclick="window.matchRefreshData && window.matchRefreshData()"
+                        class="flex items-center gap-2 px-3 py-1.5 border border-lynx-divider rounded-lg text-xs font-medium transition-colors"
+                        title="Refresh fleet and reservation data">
+                    <i class="fas fa-arrows-rotate"></i> Refresh data
+                </button>
+            </div>
+            <div id="matchContent"></div>
+        </main>
+
+    </div>
+
+    <!-- Sidebar overlay (mobile) -->
+    <div id="sidebarOverlay" class="fixed inset-0 bg-black/50 z-20 hidden md:hidden" onclick="toggleSidebar()"></div>
+
+    <!-- Scripts -->
+    <script src="shared/state.js?v=12"></script>
+    <script src="shared/dates.js?v=1"></script>
+    <script src="shared/utils.js?v=16"></script>
+    <script src="fleet/fleet.js?v=20"></script>
+    <script src="naf_stats/naf_stats.js?v=14"></script>
+    <script src="settings/settings.js?v=15"></script>
+    <script src="reservations/reservations.js?v=13"></script>
+    <script src="duplicates/duplicates.js?v=9"></script>
+    <script src="planning/planning.js?v=38"></script>
+    <script src="island-blocking/island_blocking.js?v=2"></script>
+    <script src="capacity-control/capacity_control.js?v=4"></script>
+    <script src="rotation/rotation.js?v=19"></script>
+    <script src="match/match.js?v=13"></script>
+    <script src="ow-foreign/ow_foreign.js?v=15"></script>
+    <script src="shared/data.js?v=14"></script>
+    <script src="dashboard.js?v=18"></script>
+    <script src="chatbot/widget.js?v=6"></script>
+
+<script src="/demo.js"></script></body>
+</html>

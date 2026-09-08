@@ -1,0 +1,10 @@
+#renaChatBriefing { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-bottom: 1px solid var(--ui-border, #ddd); background: var(--ui-surface, #fff); flex-shrink: 0; }
+#renaChatBriefing strong { font-size: 12px; }
+#renaChatBriefingText { font-size: 11px; line-height: 1.45; color: var(--ui-muted, #646464); margin: 4px 0 0; }
+#renaChatBriefingOpen { flex-shrink: 0; border: 1px solid #ff5000; border-radius: 5px; background: transparent; color: var(--ui-text, #202020); padding: 8px; font-size: 11px !important; }
+#renaChatBriefingOpen:disabled { opacity: .5; cursor: default; }
+.rcb-section-title { font-size: 13px; line-height: 1.4; font-weight: 700; margin: 18px 0 8px; }
+.rcb-table-wrap { max-height: 300px; overflow: auto; }
+.rcb-table-wrap thead th { position: sticky; top: 0; z-index: 1; }
+.rcb-negative { color: #b42318; font-weight: 700; }
+.dark .rcb-negative { color: #ffada6; }

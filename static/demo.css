@@ -1,0 +1,6 @@
+#renaDemoNotice { position: fixed; inset: 0 0 auto; z-index: 10050; min-height: 30px; padding: 6px 16px; background: #ff5000; color: #171717; font: 600 12px/18px Roboto, system-ui, sans-serif; text-align: center; }
+body { padding-top: 30px; }
+#sidebar { top: 30px !important; height: calc(100dvh - 30px) !important; }
+#renaDemoNotice strong { margin-right: 8px; }
+[data-demo-disabled] { opacity: .45; cursor: not-allowed !important; }
+@media (max-width: 600px) { #renaDemoNotice { font-size: 11px; padding-inline: 8px; } }

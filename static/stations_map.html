@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>RENA · Demo Stations</title>
+<link rel="stylesheet" href="/vendor/fonts.css"><link rel="stylesheet" href="/vendor/leaflet/leaflet.css">
+<style>
+*{box-sizing:border-box}body{margin:0;font:13px Roboto,system-ui,sans-serif;background:#f4f5f6;color:#202124}header{padding:16px 20px;background:#202020;color:white}h1{font-size:17px;margin:0 0 5px}header p{margin:0;color:#d3d3d3}main{display:grid;grid-template-columns:240px 1fr;height:calc(100vh - 75px)}aside{padding:12px;overflow:auto}input{width:100%;padding:10px;border:1px solid #bbb;border-radius:6px;margin-bottom:10px}.station-card{display:block;width:100%;padding:12px;margin-bottom:8px;border:1px solid #ddd;border-radius:7px;text-align:left;background:white;cursor:pointer}.station-card:hover,.station-card.selected{border-color:#ff5000}.station-card small{display:block;margin-top:6px;color:#666}#map{background:#dce6eb}.map-empty{padding:12px}button:focus-visible{outline:2px solid #ff5000}@media(max-width:560px){main{grid-template-columns:160px 1fr}aside{padding:6px}.station-card{padding:9px;font-size:12px}}
+</style></head><body><header><h1>Demo Stations</h1><p>Illustrative locations · Local map · No external services</p></header>
+<main><aside><label for="search">Search station</label><input id="search" type="search"><div id="stations"></div></aside><div id="map" aria-label="Map of fictional stations"></div></main>
+<script src="/vendor/leaflet/leaflet.js"></script><script src="/vendor/geography.js"></script><script>
+const map=L.map('map').setView([39.5,-9],6);
+L.geoJSON(window.RENA_DEMO_GEOGRAPHY,{style:{color:'#89979d',weight:1,fillColor:'#f2efe8',fillOpacity:1}}).addTo(map);
+let stations=[];const markers={};
+function render(){const box=document.getElementById('stations');box.replaceChildren();const q=document.getElementById('search').value.toLocaleLowerCase('en-GB');stations.filter(s=>s.nome.toLocaleLowerCase('en-GB').includes(q)).forEach(s=>{const b=document.createElement('button');b.className='station-card';b.textContent=s.nome;const small=document.createElement('small');small.textContent=s.zona;b.append(small);b.onclick=()=>{document.querySelectorAll('.station-card').forEach(el=>el.classList.remove('selected'));b.classList.add('selected');map.setView([s.lat,s.lon],10);markers[s.id].openPopup();};box.append(b);});if(!box.children.length){const p=document.createElement('p');p.className='map-empty';p.textContent="No stations match this search.";box.append(p);}}
+fetch('/api/not-available-fleet/stations').then(r=>r.json()).then(data=>{stations=Object.entries(data.config.stations).map(([id,s])=>({id,...s}));stations.forEach(s=>{const text=document.createElement('span');text.textContent=s.nome;markers[s.id]=L.circleMarker([s.lat,s.lon],{radius:7,color:'#202020',weight:2,fillColor:'#ff5000',fillOpacity:1}).addTo(map).bindPopup(text);});render();});
+document.getElementById('search').addEventListener('input',render);
+</script></body></html>

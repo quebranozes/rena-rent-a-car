@@ -1,0 +1,161 @@
+{
+  "stations": {
+    "101": {
+      "nome": "Lisbon · Demo Airport",
+      "zona": "Pool Lisbon",
+      "tipo": "Station",
+      "lat": 38.775,
+      "lon": -9.135,
+      "emails": [],
+      "transporte": "",
+      "nota": "Fictional demo station"
+    },
+    "102": {
+      "nome": "Lisbon · Demo Downtown",
+      "zona": "Pool Lisbon",
+      "tipo": "Parking",
+      "lat": 38.724,
+      "lon": -9.15,
+      "emails": [],
+      "transporte": "",
+      "nota": "Fictional demo station"
+    },
+    "201": {
+      "nome": "Porto · Demo Airport",
+      "zona": "Pool Porto",
+      "tipo": "Station",
+      "lat": 41.235,
+      "lon": -8.675,
+      "emails": [],
+      "transporte": "",
+      "nota": "Fictional demo station"
+    },
+    "202": {
+      "nome": "Porto · Demo Downtown",
+      "zona": "Pool Porto",
+      "tipo": "Station",
+      "lat": 41.155,
+      "lon": -8.625,
+      "emails": [],
+      "transporte": "",
+      "nota": "Fictional demo station"
+    },
+    "301": {
+      "nome": "Faro · Demo Airport",
+      "zona": "Pool Algarve",
+      "tipo": "Station",
+      "lat": 37.02,
+      "lon": -7.968,
+      "emails": [],
+      "transporte": "",
+      "nota": "Fictional demo station"
+    },
+    "401": {
+      "nome": "Funchal · Demo Downtown",
+      "zona": "Pool Madeira",
+      "tipo": "Station",
+      "lat": 32.65,
+      "lon": -16.91,
+      "emails": [],
+      "transporte": "",
+      "nota": "Fictional demo station"
+    }
+  },
+  "acriss_categories": [
+    {
+      "nome": "Compact",
+      "groups": [
+        "EDMR",
+        "CDMR",
+        "CDAR",
+        "IFAR"
+      ]
+    },
+    {
+      "nome": "Luxury",
+      "groups": [
+        "LFAE",
+        "XDAR"
+      ]
+    },
+    {
+      "nome": "7-9 Seaters",
+      "groups": [
+        "CVMV",
+        "LVMR",
+        "XVAR"
+      ]
+    },
+    {
+      "nome": "VCL",
+      "groups": [
+        "A",
+        "AX"
+      ]
+    },
+    {
+      "nome": "Electric",
+      "groups": [
+        "EDAE"
+      ]
+    }
+  ],
+  "acriss_aliases": {},
+  "planning_pools": [],
+  "planning_regions": [
+    {
+      "nome": "Central",
+      "pools": [
+        "Pool Lisbon"
+      ]
+    },
+    {
+      "nome": "North",
+      "pools": [
+        "Pool Porto"
+      ]
+    },
+    {
+      "nome": "South",
+      "pools": [
+        "Pool Algarve"
+      ]
+    },
+    {
+      "nome": "Islands",
+      "pools": [
+        "Pool Madeira"
+      ]
+    }
+  ],
+  "pool_folders": [],
+  "zones": {
+    "Pool Lisbon": {
+      "color": "#ff5000",
+      "icon": "fas fa-map-marker-alt"
+    },
+    "Pool Porto": {
+      "color": "#ff5000",
+      "icon": "fas fa-map-marker-alt"
+    },
+    "Pool Algarve": {
+      "color": "#ff5000",
+      "icon": "fas fa-map-marker-alt"
+    },
+    "Pool Madeira": {
+      "color": "#ff5000",
+      "icon": "fas fa-map-marker-alt"
+    }
+  },
+  "hiddenTypes": [],
+  "dup_exclusions": [],
+  "centros_custo": [],
+  "regras_bloqueio": [],
+  "classicStatusMap": {
+    "0": "Rented",
+    "1": "Available",
+    "5": "Workshop",
+    "9": "Preparation",
+    "45": "Return"
+  }
+}
