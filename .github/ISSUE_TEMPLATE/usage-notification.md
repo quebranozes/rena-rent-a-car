@@ -1,6 +1,6 @@
 ---
 name: Usage or adaptation notice
-about: Contact Renato Pinto about rent-a-car deployment or inform him of an adaptation.
+about: Contact Renato Pinto before any use, or report an adaptation. Sales are prohibited under the current terms.
 title: "[Usage / adaptation] "
 labels: ''
 assignees: 'quebranozes'
@@ -8,7 +8,8 @@ assignees: 'quebranozes'
 
 ## Purpose
 
-- [ ] Contact before applying RENA in a rent-a-car company
+- [ ] Contact before personal, educational, evaluation or development use
+- [ ] Contact before organizational use or rent-a-car deployment
 - [ ] Notify an adaptation or update to a previous adaptation
 
 ## Company or individual
@@ -29,4 +30,4 @@ Which RENA release or commit are you using?
 
 ---
 
-This issue is public. Do not include customer data, credentials, confidential records or private contact details. Renato can reply here. Submitting this notice satisfies the applicable contact or adaptation-notification requirement in the current LICENSE; waiting for approval is not required. Own use is free, and any requested development or support services are agreed separately. Earlier MIT grants remain unaffected.
+This issue is public. Do not include customer data, credentials, confidential records or private contact details. Renato can reply here. Send your initial notice before running, testing, evaluating, modifying or deploying the software. Submitting it satisfies the prior-contact requirement in the current LICENSE; waiting for approval is not required. Own use is free after contact. Sale, paid distribution and paid hosted access are prohibited; this notice does not authorize them. Existing permissions from earlier releases, including MIT v1.0.0, remain unaffected.

@@ -1,37 +1,49 @@
-RENA Own Use and Adaptation Notice License 1.0
-Effective for this release: 8 September 2026 (v1.1.0)
+RENA Contact Before Use and No Sale License 2.0
+Effective for this release: 8 September 2026 (v1.2.0)
 
 Copyright (c) 2026 Renato Pinto (@quebranozes)
 
 1. Permission and scope
 
-Subject to the conditions below, you may access, study, run, copy and modify
-the original RENA software and documentation (the "Software") free of charge
-for your own use. Own use includes personal learning, experimentation and
-evaluation, and an organization's own internal use. You may explore and
-adapt the Software to suit your needs.
+You may view and read this public repository for portfolio review. GitHub's
+built-in viewing and forking features remain available. Before any other use
+of the original RENA software and documentation (the "Software"), you must
+contact Renato Pinto as described in section 3.
 
-You may share the Software and your adaptations without charging for the
-Software, including through public forks and contributions, provided you
-retain this license and the author's copyright notice and identify changes.
-Recipients receive these same permissions subject to these same conditions.
-Selling the Software or providing it as a paid service is outside this grant;
-contact the author to discuss separate terms for those activities.
+After that contact, and subject to all conditions below, you may run, copy
+and modify the Software free of charge for your own personal or internal
+organizational use. You may share copies and adaptations free of charge,
+provided you retain this license, preserve the author's copyright notice
+and identify your changes. Each recipient must independently satisfy the
+contact requirement before use; contact by a distributor does not cover
+other users.
 
-2. Contact before rent-a-car business use
+2. No sale or paid distribution
 
-Any rent-a-car company wishing to apply or deploy the Software in its business
-must contact Renato Pinto before operational use, including use of an
-unmodified copy. This also applies when a contractor deploys it on behalf of
-such a company. Identify the company and describe the intended application
-and any required adaptations. Local exploration and evaluation are permitted
-without prior contact.
+You must not sell, resell, rent, license for a fee or otherwise distribute
+the Software or its adaptations for payment, including as part of a paid
+software bundle. You must not offer the Software or its adaptations as a
+paid hosted service or charge others for access to them. Contacting the
+author does not grant permission for any of these activities.
 
-This is a contact requirement, not a requirement to wait for approval. This
-license does not impose a fee for the company's own internal use. Paid
-development, support or other services require a separate agreement.
+Using the Software internally to operate your own rent-a-car business does
+not, by itself, constitute selling the Software. Such use still requires
+prior contact under section 3.
 
-3. Notification of adaptations
+3. Contact before any use and notification of adaptations
+
+Every individual or organization must contact Renato Pinto before running,
+testing, evaluating, modifying, integrating, deploying or otherwise using
+the Software beyond the repository viewing and forking permitted in section
+1. This applies to personal, educational, internal and business use, with or
+without modifications. Rent-a-car companies and contractors acting for them
+must identify the company and describe its intended use before deployment.
+
+Identify yourself or your organization and explain the intended use and any
+planned adaptations through the contact channel below. This is a prior
+contact requirement; waiting for approval is not required. Own use remains
+free of charge after contact, subject to this license. Contact never waives
+the prohibition on sale or paid distribution.
 
 Anyone making an adaptation must inform Renato Pinto of the changes and their
 intended use. Provide a brief description when making the adaptation and
@@ -54,7 +66,7 @@ copies and associated documentation. Do not imply the author endorses an
 adaptation. Third-party components remain under their own licenses, listed
 in THIRD_PARTY.md; these conditions do not override those licenses.
 
-6. Previous MIT release
+6. Earlier releases and existing permissions
 
 Version v1.0.0, commit 083ceac0c72d484723678d2be8b49ecdeff5ddae, was published
 under the MIT License. Its license is preserved in docs/licenses/MIT-v1.0.0.txt.
@@ -62,8 +74,13 @@ This license does not withdraw or restrict permissions already granted under
 MIT for that material. The contact and notification conditions here do not
 retroactively apply to rights exercised under that earlier MIT grant.
 Material obtained from v1.0.0 remains available under its MIT terms even when
-the same material also appears in this release. New original material first
-published under this license is subject to this license.
+the same material also appears in this release. Version v1.1.0 retains the
+grants in its own license, available at:
+https://github.com/quebranozes/rena-rent-a-car/blob/v1.1.0/LICENSE
+
+This license does not revoke permissions already granted in either earlier
+release. New original material first published under this license is subject
+to these contact-before-use and no-sale conditions.
 
 7. Warranty and liability
 
